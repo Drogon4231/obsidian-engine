@@ -17,6 +17,30 @@
 profile: documentary
 
 
+# ── Providers ────────────────────────────────────────────────────────────────
+# Swap any service by changing the provider name.
+# Built-in options:
+#   llm:     anthropic, openai
+#   tts:     elevenlabs
+#   images:  fal
+#   footage: pexels
+#   upload:  local
+# Or use a custom class: "my_package.module.ClassName"
+providers:
+  llm:
+    name: anthropic
+  tts:
+    name: elevenlabs
+  images:
+    name: fal
+  footage:
+    name: pexels
+  upload:
+    name: local
+    options:
+      # output_dir: "./outputs/final"   # Uncomment to set custom output path
+
+
 # ── Voice & Narration ─────────────────────────────────────────────────────────
 # ElevenLabs voice IDs — browse at https://elevenlabs.io/voice-library
 # Set to null to use env vars ELEVENLABS_NARRATOR_VOICE_ID / ELEVENLABS_QUOTE_VOICE_ID
