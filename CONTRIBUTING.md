@@ -6,7 +6,7 @@ Thanks for your interest in contributing! This guide will help you get started.
 
 ```bash
 # Fork and clone the repo
-git clone https://github.com/YOUR_USERNAME/obsidian-engine.git
+git clone https://github.com/Drogon4231/obsidian-engine.git
 cd obsidian-engine
 
 # Python environment
@@ -53,11 +53,32 @@ These are non-negotiable rules. Violating them will cause bugs:
 4. **Thread safety**: Shared state in parallel phases must use `runner.mark_metadata()` (acquires lock).
 5. **Import style**: One import per line (ruff E401). Lazy imports in try/except for optional modules.
 
+## Adding a Content Profile
+
+1. Copy `profiles/_template.yaml` to `profiles/your_style.yaml`
+2. Fill in all sections (tone, narrative, research, script, visuals, seo, shorts, style_directive)
+3. Set `profile: your_style` in `obsidian.yaml`
+4. Run `python -m pytest tests/test_profile.py -v` to verify
+
+The `style_directive` block is injected into every AI agent's prompt. It's the single most impactful thing to get right.
+
+## Adding a Provider
+
+1. Create a class extending the base in `providers/base.py` (e.g., `providers/tts/openai_tts.py`)
+2. Register it in `providers/registry.py` under `_BUILTIN_PROVIDERS`
+3. Add tests in `tests/test_providers.py`
+4. Users can then select it in `obsidian.yaml`:
+   ```yaml
+   providers:
+     tts:
+       name: openai_tts
+   ```
+
 ## What to Contribute
 
 Good first issues:
-- Add a new content profile (e.g., `profiles/tutorial.yaml`)
-- Add a new provider (e.g., OpenAI TTS, local Ollama)
+- Add a new content profile (e.g., `profiles/tutorial.yaml`, `profiles/gaming.yaml`)
+- Add a new provider (e.g., OpenAI TTS, Replicate images, local Ollama)
 - Improve documentation
 - Add test coverage
 
