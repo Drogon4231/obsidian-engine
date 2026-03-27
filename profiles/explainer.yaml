@@ -1,0 +1,104 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile: Explainer
+# ═══════════════════════════════════════════════════════════════════════════════
+# Clear, engaging explainer videos. Think Kurzgesagt, Wendover Productions,
+# Real Engineering. Makes complex topics accessible and fascinating.
+
+name: "Explainer"
+description: "Clear, engaging explainers — makes complex topics accessible and fascinating"
+
+# ── Tone & Voice ──────────────────────────────────────────────────────────────
+tone:
+  primary: "clear, curious, enthusiastic"
+  emotional_range: "wonder, surprise, satisfaction, humor, determination"
+  avoid: "condescending, overly academic, dry, preachy"
+  narrator_personality: "smart friend explaining something fascinating over coffee — genuinely excited to share"
+
+# ── Narrative Style ───────────────────────────────────────────────────────────
+narrative:
+  hook_style: "question"           # question, surprising_fact, misconception
+  hook_description: "Open with a surprising question or counterintuitive fact that challenges assumptions"
+  hook_registers:
+    - CURIOSITY
+    - SURPRISE
+    - STAKES
+    - PARADOX
+
+  structure_types:
+    - CLASSIC           # Problem → Exploration → Solution
+    - MYSTERY           # Start with puzzle, solve it step by step
+    - REFRAME           # Challenge common misconception
+    - COUNTDOWN         # "5 reasons why..." or build-up format
+
+  pacing:
+    opening_wpm: "155-165"
+    body_wpm: "140-155"
+    reveal_wpm: "120-135"
+    silence_wpm: "100-115"
+    closing_wpm: "145-155"
+
+  features:
+    - surprising_hook
+    - visual_analogy
+    - aha_moment
+    - recap_checkpoint
+    - satisfying_conclusion
+
+# ── Research Focus ────────────────────────────────────────────────────────────
+research:
+  emphasis: "clear explanations, visual analogies, common misconceptions, real-world examples, data and statistics"
+  special_fields:
+    - visual_analogies
+    - common_misconceptions
+    - real_world_examples
+  depth: "thorough but accessible"
+
+# ── Script Rules ──────────────────────────────────────────────────────────────
+script:
+  writing_style: "conversational but precise — like Kurzgesagt or Wendover narration"
+  punctuation: "natural rhythm, occasional rhetorical questions, clear transitions"
+  references: "Kurzgesagt, Wendover Productions, Real Engineering"
+  act_structure: "Question → Exploration → Answer with satisfying conclusion"
+  ending: "satisfying callback to the opening question — the viewer leaves feeling smarter"
+
+# ── Visual Style ──────────────────────────────────────────────────────────────
+visuals:
+  mood_palette:
+    - bright
+    - clean
+    - wonder
+    - technical
+    - warm
+    - energetic
+  camera_language: false          # Focus on diagrams, animations, infographics
+  treatments:
+    - diagram_overlay
+    - infographic
+    - comparison_split
+    - zoom_detail
+    - animated_process
+
+# ── SEO Style ────────────────────────────────────────────────────────────────
+seo:
+  title_style: "clear value proposition — what will the viewer learn?"
+  thumbnail_style: "bold text, clean design, bright colors, visual hook"
+  tag_focus: "explained, how it works, science, education, technology"
+  chapter_style: "The Problem / How It Works / Why It Matters / The Surprising Truth"
+
+# ── Shorts Style ──────────────────────────────────────────────────────────────
+shorts:
+  tone: "punchy and mind-blowing — make them feel smarter in 60 seconds"
+  hook: "counterintuitive fact or 'did you know' that stops the scroll"
+  structure: "HOOK (2-3s) → SETUP (10s) → EXPLANATION (25s) → PAYOFF (15s) → CTA (5s)"
+
+# ── Style Directive ───────────────────────────────────────────────────────────
+style_directive: |
+  CONTENT STYLE: Educational explainer
+  TONE: Clear, curious, enthusiastic — like a smart friend explaining something fascinating. Never condescending or dry.
+  EMOTIONAL RANGE: wonder, surprise, satisfaction, humor, determination.
+  WRITING: Conversational but precise. Natural rhythm, rhetorical questions, clear transitions. Think Kurzgesagt narration.
+  STRUCTURE: Question → Exploration → Answer. Open with surprising question or counterintuitive fact.
+  HOOK: Challenge an assumption or reveal a surprising fact. Make the viewer need to know the answer.
+  RESEARCH EMPHASIS: Clear explanations, visual analogies, common misconceptions, real-world examples and data.
+  VISUAL APPROACH: Clean and informative. Diagrams, infographics, comparison splits, animated processes. Bright, wonder-filled palette.
+  ENDING: Satisfying callback to the opening question. The viewer leaves feeling smarter.

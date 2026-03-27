@@ -10,6 +10,13 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+# ── Content Profile ────────────────────────────────────────────────────────────
+# Controls the style, tone, and structure of generated content.
+# Available profiles: documentary, explainer, true_crime, video_essay
+# Or create your own in profiles/ (see profiles/_template.yaml)
+profile: documentary
+
+
 # ── Voice & Narration ─────────────────────────────────────────────────────────
 # ElevenLabs voice IDs — browse at https://elevenlabs.io/voice-library
 # Set to null to use env vars ELEVENLABS_NARRATOR_VOICE_ID / ELEVENLABS_QUOTE_VOICE_ID

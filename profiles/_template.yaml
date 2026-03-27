@@ -1,0 +1,79 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile Template — Copy this and customize for your channel
+# ═══════════════════════════════════════════════════════════════════════════════
+# Save as profiles/my_style.yaml, then set in obsidian.yaml:
+#   profile: my_style
+
+name: "My Custom Profile"
+description: "One-line description of your content style"
+
+tone:
+  primary: "your main tone words"
+  emotional_range: "emotions your content evokes"
+  avoid: "tones you never want"
+  narrator_personality: "describe your narrator in one sentence"
+
+narrative:
+  hook_style: "cold_open"      # cold_open, question, statement, teaser
+  hook_description: "How you open videos"
+  hook_registers:
+    - TENSION
+    - CURIOSITY
+  structure_types:
+    - CLASSIC
+    - MYSTERY
+  pacing:
+    opening_wpm: "145-155"
+    body_wpm: "130-145"
+    reveal_wpm: "95-110"
+    silence_wpm: "80-95"
+    closing_wpm: "120-135"
+  features:
+    - cold_open
+    - twist_reveal
+
+research:
+  emphasis: "what kind of sources and details to focus on"
+  special_fields:
+    - key_detail_type
+  depth: "deep"                # deep, thorough, surface
+
+script:
+  writing_style: "describe your writing voice"
+  punctuation: "punctuation preferences"
+  references: "channels you want to sound like"
+  act_structure: "your story structure"
+  ending: "how videos should end"
+
+visuals:
+  mood_palette:
+    - dark
+    - dramatic
+  camera_language: true        # true for cinematic, false for infographic
+  treatments:
+    - close_portrait
+    - wide_establishing
+
+seo:
+  title_style: "your title philosophy"
+  thumbnail_style: "your thumbnail approach"
+  tag_focus: "your niche keywords"
+  chapter_style: "Act 1 / Act 2 / Act 3"
+
+shorts:
+  tone: "your shorts tone"
+  hook: "how shorts should open"
+  structure: "HOOK → BODY → PAYOFF → CTA"
+
+# This is the most important part — gets injected into every agent prompt.
+# Be specific about what you want.
+style_directive: |
+  CONTENT STYLE: Your content type
+  TONE: Your tone description
+  EMOTIONAL RANGE: emotions
+  WRITING: Your writing style rules
+  STRUCTURE: Your narrative structure
+  HOOK: Your hook approach
+  RESEARCH EMPHASIS: What to focus research on
+  VISUAL APPROACH: Your visual style
+  ENDING: How to end videos

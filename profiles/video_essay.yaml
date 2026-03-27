@@ -1,0 +1,102 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile: Video Essay
+# ═══════════════════════════════════════════════════════════════════════════════
+# Thoughtful, analytical video essays. Think Nerdwriter, Every Frame a Painting,
+# Philosophy Tube. Personal perspective, cultural analysis, strong thesis.
+
+name: "Video Essay"
+description: "Thoughtful analytical essays — personal perspective, cultural analysis, strong thesis"
+
+# ── Tone & Voice ──────────────────────────────────────────────────────────────
+tone:
+  primary: "thoughtful, analytical, personal"
+  emotional_range: "insight, nostalgia, irony, conviction, wonder"
+  avoid: "preachy, pretentious, detached, clickbait"
+  narrator_personality: "intelligent essayist sharing a perspective — opinionated but fair, personal but rigorous"
+
+# ── Narrative Style ───────────────────────────────────────────────────────────
+narrative:
+  hook_style: "statement"
+  hook_description: "Bold thesis statement or provocative claim that demands engagement"
+  hook_registers:
+    - THESIS
+    - PROVOCATION
+    - NOSTALGIA
+    - REFRAME
+
+  structure_types:
+    - CLASSIC           # Thesis → Evidence → Conclusion
+    - REFRAME           # Challenge accepted view
+    - DUAL_TIMELINE     # Compare two things to reveal truth
+
+  pacing:
+    opening_wpm: "150-160"
+    body_wpm: "140-155"
+    reveal_wpm: "115-130"
+    silence_wpm: "95-110"
+    closing_wpm: "135-150"
+
+  features:
+    - thesis_statement
+    - counterargument
+    - personal_reflection
+    - cultural_reference
+    - synthesized_conclusion
+
+# ── Research Focus ────────────────────────────────────────────────────────────
+research:
+  emphasis: "cultural context, critical analysis, comparative examples, expert opinions, historical precedent"
+  special_fields:
+    - cultural_references
+    - counterarguments
+    - expert_quotes
+  depth: "analytical — breadth over exhaustive detail"
+
+# ── Script Rules ──────────────────────────────────────────────────────────────
+script:
+  writing_style: "essayistic — flowing prose with personal voice and analytical rigor"
+  punctuation: "varied sentence length, occasional parenthetical asides, rhetorical questions"
+  references: "Nerdwriter, Every Frame a Painting, Philosophy Tube"
+  act_structure: "Thesis → Evidence & Counterpoint → Synthesized Conclusion"
+  ending: "return to the thesis with deeper understanding — the viewer sees the world differently"
+
+# ── Visual Style ──────────────────────────────────────────────────────────────
+visuals:
+  mood_palette:
+    - warm
+    - contemplative
+    - nostalgic
+    - crisp
+    - moody
+  camera_language: false
+  treatments:
+    - clip_analysis
+    - text_overlay
+    - comparison_split
+    - slow_zoom
+    - archival_montage
+
+# ── SEO Style ────────────────────────────────────────────────────────────────
+seo:
+  title_style: "provocative thesis or 'why X matters' — intellectual curiosity gap"
+  thumbnail_style: "clean, subject-focused, subtle text, warm tones"
+  tag_focus: "video essay, analysis, culture, film, society, philosophy"
+  chapter_style: "The Question / The Evidence / The Counterpoint / The Truth"
+
+# ── Shorts Style ──────────────────────────────────────────────────────────────
+shorts:
+  tone: "one sharp insight that reframes how you see something"
+  hook: "bold claim or 'here's what everyone gets wrong about...'"
+  structure: "THESIS (3s) → EVIDENCE (20s) → REFRAME (25s) → PUNCHLINE (10s)"
+
+# ── Style Directive ───────────────────────────────────────────────────────────
+style_directive: |
+  CONTENT STYLE: Video essay
+  TONE: Thoughtful and analytical — personal but rigorous. Opinionated but fair. Never preachy or pretentious.
+  EMOTIONAL RANGE: insight, nostalgia, irony, conviction, wonder.
+  WRITING: Essayistic flowing prose. Varied sentence length, parenthetical asides, rhetorical questions. Personal voice with analytical backbone.
+  STRUCTURE: Thesis → Evidence & Counterpoint → Synthesized Conclusion. Always have a clear, arguable thesis.
+  HOOK: Bold thesis statement or provocative reframe that demands engagement.
+  RESEARCH EMPHASIS: Cultural context, critical analysis, comparative examples, expert opinions, historical precedent.
+  VISUAL APPROACH: Warm and contemplative. Clip analysis, text overlays, comparison splits, archival montage. Clean, moody palette.
+  ENDING: Return to the thesis with deeper understanding. The viewer sees the world differently.

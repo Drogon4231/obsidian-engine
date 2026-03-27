@@ -1,0 +1,110 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile: Documentary
+# ═══════════════════════════════════════════════════════════════════════════════
+# Deep, cinematic documentaries in the style of Netflix/HBO. Dark history,
+# investigations, untold stories. Authoritative narrator with gravitas.
+
+name: "Documentary"
+description: "Cinematic deep-dive documentaries — dark history, investigations, untold stories"
+
+# ── Tone & Voice ──────────────────────────────────────────────────────────────
+tone:
+  primary: "authoritative, cinematic, gravitas"
+  emotional_range: "dread, wonder, intimacy, fascination, devastation"
+  avoid: "casual, upbeat, clickbait, sensational without substance"
+  narrator_personality: "genuinely fascinated, sometimes disturbed or amazed — never detached"
+
+# ── Narrative Style ───────────────────────────────────────────────────────────
+narrative:
+  hook_style: "cold_open"          # cold_open, question, statement, teaser
+  hook_description: "Flash-forward to the most devastating moment, then pull back"
+  hook_registers:
+    - TENSION
+    - DREAD_THROUGH_BEAUTY
+    - MYSTERY
+    - INTIMACY
+
+  structure_types:
+    - CLASSIC           # Linear chronological with twist
+    - MYSTERY           # Begin with unanswered question
+    - DUAL_TIMELINE     # Interweave past and present
+    - COUNTDOWN         # Build toward known endpoint
+    - TRIAL             # Present evidence, reach verdict
+    - REFRAME           # Challenge accepted narrative
+
+  pacing:
+    opening_wpm: "145-155"
+    body_wpm: "130-145"
+    reveal_wpm: "95-110"
+    silence_wpm: "80-95"
+    closing_wpm: "120-135"
+
+  features:
+    - cold_open
+    - pov_shifts
+    - reflection_beat
+    - twist_reveal
+    - breathing_room
+
+# ── Research Focus ────────────────────────────────────────────────────────────
+research:
+  emphasis: "primary sources, archival details, suppressed narratives, contradictions in mainstream accounts"
+  special_fields:
+    - archival_gems
+    - suppressed_details
+    - twist_potential
+  depth: "deep"
+
+# ── Script Rules ──────────────────────────────────────────────────────────────
+script:
+  writing_style: "cinematic, dramatic — like a Netflix documentary narrator"
+  punctuation: "em-dashes, ellipses, short punchy sentences for impact"
+  references: "Voices of the Past, Fall of Civilizations"
+  act_structure: "3-act with cold open prologue"
+  ending: "final line lands in silence — no call to action in narration"
+
+# ── Visual Style ──────────────────────────────────────────────────────────────
+visuals:
+  mood_palette:
+    - dark
+    - tense
+    - reverent
+    - cold
+    - dramatic
+    - wonder
+    - warmth
+    - absurdity
+  camera_language: true          # Use shot types: CLOSE-UP, WIDE, LOW ANGLE, etc.
+  treatments:
+    - close_portrait
+    - wide_establishing
+    - artifact_detail
+    - map_overhead
+    - text_overlay_dark
+
+# ── SEO Style ────────────────────────────────────────────────────────────────
+seo:
+  title_style: "curiosity gap — cinematic, not clickbait"
+  thumbnail_style: "high contrast, dramatic lighting, max 4 words overlay"
+  tag_focus: "dark history, documentary, investigation, untold story"
+  chapter_style: "Act 1: The accepted narrative / Act 2: The cracks / Act 3: The real story"
+
+# ── Shorts Style ──────────────────────────────────────────────────────────────
+shorts:
+  tone: "documentary gravitas, not TikTok hype"
+  hook: "pattern interrupt — stop the scroll with devastating opening"
+  structure: "HOOK (2-3s) → CLAIM (15s) → TENSION (18s) → PAYOFF (12s) → CTA (5s)"
+
+# ── Style Directive ───────────────────────────────────────────────────────────
+# This block is injected into every agent's system prompt to set the overall tone.
+# It's the single most important piece — controls how every agent behaves.
+style_directive: |
+  CONTENT STYLE: Cinematic documentary
+  TONE: Authoritative with gravitas — genuinely fascinated, sometimes disturbed or amazed, never detached or casual.
+  EMOTIONAL RANGE: dread, wonder, intimacy, fascination, devastation.
+  WRITING: Cinematic, dramatic. Use em-dashes, ellipses, short punchy sentences for impact. Think Netflix documentary narrator.
+  STRUCTURE: 3-act with cold open prologue. Include POV shifts, reflection beats, and breathing room.
+  HOOK: Flash-forward to the most devastating moment, then pull back to "how did we get here?"
+  RESEARCH EMPHASIS: Primary sources, archival details, suppressed narratives, contradictions in mainstream accounts.
+  VISUAL APPROACH: Cinematic and specific. Use camera language (CLOSE-UP, WIDE, LOW ANGLE). Dark, dramatic mood palette.
+  ENDING: Final line lands in silence. No call to action in the narration itself.

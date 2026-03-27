@@ -62,6 +62,15 @@ def init_context(topic: str, resume: bool, from_stage: int, is_experiment: bool)
     except Exception:
         pass
 
+    # Reset profile cache (load fresh for this run)
+    try:
+        from core.profile import reset_profile_cache, get_profile
+        reset_profile_cache()
+        profile = get_profile()
+        logger.info(f"[Pipeline] Active profile: {profile.get('name', 'default')}")
+    except Exception:
+        pass
+
     # Load parameter overrides (frozen for entire run)
     try:
         from core.param_overrides import reset_pipeline_cache, load_overrides_for_pipeline

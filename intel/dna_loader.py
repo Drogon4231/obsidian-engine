@@ -163,10 +163,26 @@ def _load_channel_intelligence() -> str:
         return ""
 
 
+def _load_style_directive() -> str:
+    """Load the active profile's style directive. Returns '' if unavailable."""
+    try:
+        from core.profile import get_style_directive
+        return get_style_directive()
+    except Exception:
+        return ""
+
+
 def get_dna(sections: list[str]) -> str:
     """Return concatenated DNA sections for the requested keys.
-    Special key 'channel_intelligence' loads live analytics data dynamically."""
+    Special key 'channel_intelligence' loads live analytics data dynamically.
+    The active profile's style directive is always prepended."""
     parts = []
+
+    # Inject profile style directive first (sets tone for all agents)
+    style = _load_style_directive()
+    if style:
+        parts.append(f"=== CONTENT PROFILE ===\n{style}")
+
     for key in sections:
         if key == "channel_intelligence":
             block = _load_channel_intelligence()

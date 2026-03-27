@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Profile: True Crime
+# ═══════════════════════════════════════════════════════════════════════════════
+# Gripping true crime narratives. Think JCS Criminal Psychology, That Chapter,
+# Coffeehouse Crime. Methodical investigation with psychological depth.
+
+name: "True Crime"
+description: "Gripping true crime investigations — methodical, psychological, suspenseful"
+
+# ── Tone & Voice ──────────────────────────────────────────────────────────────
+tone:
+  primary: "measured, investigative, empathetic"
+  emotional_range: "suspense, unease, empathy, shock, grim determination"
+  avoid: "sensationalist, disrespectful to victims, glorifying perpetrators, flippant"
+  narrator_personality: "careful investigator walking the viewer through evidence — respects victims, doesn't flinch from hard truths"
+
+# ── Narrative Style ───────────────────────────────────────────────────────────
+narrative:
+  hook_style: "cold_open"
+  hook_description: "A detail that feels ordinary until you realize what it means"
+  hook_registers:
+    - UNEASE
+    - MYSTERY
+    - DREAD_THROUGH_NORMALCY
+    - DRAMATIC_IRONY
+
+  structure_types:
+    - MYSTERY           # Begin with the crime, work backward
+    - DUAL_TIMELINE     # Investigation timeline vs. crime timeline
+    - TRIAL             # Present evidence, build to verdict/revelation
+    - COUNTDOWN         # Timeline toward inevitable event
+
+  pacing:
+    opening_wpm: "135-145"
+    body_wpm: "125-140"
+    reveal_wpm: "100-115"
+    silence_wpm: "85-100"
+    closing_wpm: "115-130"
+
+  features:
+    - cold_open
+    - evidence_reveal
+    - psychological_profile
+    - timeline_reconstruction
+    - victim_humanization
+
+# ── Research Focus ────────────────────────────────────────────────────────────
+research:
+  emphasis: "court records, witness statements, forensic evidence, psychological analysis, timeline reconstruction"
+  special_fields:
+    - forensic_details
+    - psychological_profile
+    - timeline_events
+  depth: "exhaustive — every detail matters"
+
+# ── Script Rules ──────────────────────────────────────────────────────────────
+script:
+  writing_style: "measured, precise — each sentence reveals something new"
+  punctuation: "deliberate pauses, short declarative sentences, occasional long descriptive passages"
+  references: "JCS Criminal Psychology, That Chapter, Coffeehouse Crime"
+  act_structure: "The Crime → The Investigation → The Truth"
+  ending: "final revelation or unresolved question that haunts — never neat"
+
+# ── Visual Style ──────────────────────────────────────────────────────────────
+visuals:
+  mood_palette:
+    - dark
+    - cold
+    - clinical
+    - tense
+    - somber
+  camera_language: true
+  treatments:
+    - crime_scene_recreation
+    - evidence_closeup
+    - timeline_overlay
+    - mugshot_reveal
+    - map_tracking
+
+# ── SEO Style ────────────────────────────────────────────────────────────────
+seo:
+  title_style: "mystery hook — hint at what makes this case different"
+  thumbnail_style: "dark, high contrast, face or evidence close-up, minimal text"
+  tag_focus: "true crime, unsolved, investigation, criminal psychology, cold case"
+  chapter_style: "The Disappearance / The Investigation / The Breakthrough / The Verdict"
+
+# ── Shorts Style ──────────────────────────────────────────────────────────────
+shorts:
+  tone: "chilling detail that makes you need to hear the full story"
+  hook: "one disturbing detail that flips everything"
+  structure: "HOOK (3s) → CONTEXT (10s) → EVIDENCE (25s) → TWIST (15s) → CTA (5s)"
+
+# ── Style Directive ───────────────────────────────────────────────────────────
+style_directive: |
+  CONTENT STYLE: True crime investigation
+  TONE: Measured and investigative — empathetic toward victims, analytical toward perpetrators. Never sensationalist or disrespectful.
+  EMOTIONAL RANGE: suspense, unease, empathy, shock, grim determination.
+  WRITING: Precise and methodical. Each sentence reveals something new. Deliberate pauses, short declarative sentences.
+  STRUCTURE: The Crime → The Investigation → The Truth. Begin with the crime, work backward through evidence.
+  HOOK: A detail that seems ordinary until you realize what it means. Dramatic irony and unease.
+  RESEARCH EMPHASIS: Court records, witness statements, forensic evidence, psychological analysis, timeline reconstruction.
+  VISUAL APPROACH: Dark and clinical. Crime scene recreation, evidence close-ups, timeline overlays. Cold, tense palette.
+  ENDING: Final revelation or unresolved question that haunts. Never neat or wrapped up cleanly.
