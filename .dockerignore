@@ -1,0 +1,16 @@
+.git
+.env
+__pycache__
+*.pyc
+.claude/
+outputs/
+node_modules/
+remotion/public/music/*.mp3
+remotion/out/
+*.log
+.DS_Store
+tests/
+*.md
+.pytest_cache/
+channel_insights.json
+lessons_learned.json

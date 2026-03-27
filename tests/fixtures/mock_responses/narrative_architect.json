@@ -1,0 +1,51 @@
+{
+  "topic": "The Mysterious Disappearance of Flight 19",
+  "chosen_angle": "How a mother's grief rewrote military history",
+  "structure_type": "MYSTERY",
+  "length_tier": "STANDARD",
+  "estimated_length_minutes": 10,
+  "cold_open": "They changed the report. Crossed out pilot error. Wrote reasons unknown. That doesn't happen in the Navy.",
+  "hook_register": "MYSTERY",
+  "hook": {
+    "opening_scene": "A Navy clerk crossing out words on an official document",
+    "stakes": "The truth about 27 missing men",
+    "opening_question": "Why did the Navy change its own conclusion?"
+  },
+  "act1": {
+    "title": "The Crime Scene",
+    "summary": "December 5 1945. Flight 19 departs on a routine navigation exercise.",
+    "key_beats": ["Takeoff", "First signs of trouble", "Taylor's compass failure"],
+    "cliffhanger": "Taylor refuses to switch to emergency frequency"
+  },
+  "act2": {
+    "title": "Rewinding the Clock",
+    "summary": "The search that vanished too. A rescue plane with 13 crew disappears.",
+    "evidence_sequence": ["Martin Mariner dispatch", "SS Gaines Mills explosion report", "No wreckage found"],
+    "tension_peak": "27 men, 6 aircraft, zero physical evidence"
+  },
+  "act3": {
+    "title": "The Why",
+    "summary": "Taylor's mother campaigns to clear his name. The Navy changes its verdict.",
+    "reveal_sequence": ["Mother's petition", "Political pressure", "Verdict rewritten"],
+    "sources_for_reveal": ["Navy Board amendment records", "Taylor family correspondence"]
+  },
+  "ending": {
+    "reframe": "The real mystery is not what happened but who controls the story",
+    "final_line": "The ocean keeps what it takes. But the records — those can be rewritten.",
+    "cta": "If this changed how you see history, subscribe."
+  },
+  "pov_shift": {
+    "location": "end of Act 2",
+    "from_perspective": "Navy investigators",
+    "to_perspective": "Taylor's mother",
+    "line": "To the Navy, this was a closed case. To one mother in Florida, it was an open wound."
+  },
+  "reflection_beat": {
+    "placement": "after Act 3 reveal",
+    "visual": "Empty ocean horizon at sunset",
+    "duration_seconds": 10
+  },
+  "archival_moment": "Taylor's last known words: 'We'll fly west until we hit the beach or run out of gas'",
+  "emotional_arc": "Curiosity → Dread → Grief → Outrage → Silence",
+  "pacing_notes": "Open slow, accelerate through Act 2, hold silence after reveal"
+}

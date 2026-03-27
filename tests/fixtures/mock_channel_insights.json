@@ -1,0 +1,33 @@
+{
+  "channel_stats": {
+    "total_videos": 25,
+    "total_subscribers": 12000,
+    "total_views": 450000,
+    "avg_views_per_video": 18000
+  },
+  "era_performance": {
+    "cold_war": {"avg_views": 22000, "video_count": 5, "avg_retention": 0.45},
+    "ww2": {"avg_views": 25000, "video_count": 4, "avg_retention": 0.48},
+    "ancient": {"avg_views": 15000, "video_count": 3, "avg_retention": 0.40},
+    "modern_crime": {"avg_views": 20000, "video_count": 6, "avg_retention": 0.44},
+    "renaissance": {"avg_views": 12000, "video_count": 2, "avg_retention": 0.38}
+  },
+  "audience_sentiment": {
+    "voice": {"rolling_avg": 7.5, "trend": "stable"},
+    "music": {"rolling_avg": 8.0, "trend": "improving"},
+    "pacing": {"rolling_avg": 6.5, "trend": "declining"},
+    "visuals": {"rolling_avg": 7.0, "trend": "stable"},
+    "topic": {"rolling_avg": 8.5, "trend": "stable"}
+  },
+  "recent_videos": [
+    {"title": "The Vanishing of Flight 19", "views": 28000, "era": "cold_war", "ctr": 8.2},
+    {"title": "The Real Count Dracula", "views": 15000, "era": "renaissance", "ctr": 6.1},
+    {"title": "Operation Paperclip", "views": 22000, "era": "cold_war", "ctr": 7.5}
+  ],
+  "shorts_intelligence": {
+    "total_shorts": 10,
+    "avg_views": 5000,
+    "avg_subs_gained": 15,
+    "top_eras": ["cold_war", "modern_crime"]
+  }
+}

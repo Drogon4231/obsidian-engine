@@ -1,0 +1,51 @@
+{
+  "scenes": [
+    {
+      "scene_id": 1,
+      "narration": "December 5th, 1945. Five torpedo bombers lift off from Fort Lauderdale. None of them come back.",
+      "duration_seconds": 6.0,
+      "visual_type": "historical_art",
+      "visual_description": "Five TBM Avenger torpedo bombers in formation against a darkening sky, 1945",
+      "pexels_query": "military planes formation sky",
+      "wikimedia_query": "TBM Avenger torpedo bomber 1945",
+      "mood": "dark",
+      "year": "1945",
+      "location": "Fort Lauderdale, Florida",
+      "characters_mentioned": [],
+      "is_reveal_moment": false,
+      "show_map": false,
+      "show_timeline": false,
+      "lower_third": null,
+      "key_text": "December 5, 1945",
+      "key_text_type": "date",
+      "retention_hook": null,
+      "visual_treatment": "wide_establishing",
+      "is_breathing_room": false,
+      "narrative_position": "hook"
+    },
+    {
+      "scene_id": 2,
+      "narration": "Flight 19 was a routine training exercise. Fourteen men, five planes, a simple navigation triangle over the Bahamas.",
+      "duration_seconds": 7.0,
+      "visual_type": "historical_art",
+      "visual_description": "A navigation map on a desk showing the triangular route over the Bahamas, vintage 1940s style",
+      "pexels_query": "vintage navigation map desk",
+      "wikimedia_query": "Flight 19 navigation route Bahamas",
+      "mood": "cold",
+      "year": "1945",
+      "location": "Bahamas",
+      "characters_mentioned": ["Lt. Charles Taylor"],
+      "is_reveal_moment": false,
+      "show_map": true,
+      "show_timeline": false,
+      "lower_third": "Lt. Charles Taylor, Flight Leader",
+      "key_text": null,
+      "key_text_type": null,
+      "retention_hook": null,
+      "visual_treatment": "artifact_detail",
+      "is_breathing_room": false,
+      "narrative_position": "act1"
+    }
+  ],
+  "total_scenes": 2
+}

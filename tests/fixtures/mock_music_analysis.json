@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-03-20T10:00:00+00:00",
+  "track_count": 3,
+  "tracks": {
+    "epidemic_dark_01_shadows.mp3": {
+      "duration_seconds": 240.0,
+      "tempo_bpm": 85.0,
+      "key": "D",
+      "mode": "minor",
+      "energy_curve": [0.2, 0.3, 0.5, 0.7, 1.0, 0.9, 0.8, 0.6, 0.4, 0.3],
+      "sections": [
+        {"label": "intro", "start": 0.0, "end": 30.0},
+        {"label": "build", "start": 30.0, "end": 80.0},
+        {"label": "climax", "start": 80.0, "end": 160.0},
+        {"label": "resolution", "start": 160.0, "end": 240.0}
+      ],
+      "peak_moments": [95.0, 125.0],
+      "_file_size": 5000000
+    },
+    "epidemic_tense_02_pursuit.mp3": {
+      "duration_seconds": 180.0,
+      "tempo_bpm": 120.0,
+      "key": "A",
+      "mode": "minor",
+      "energy_curve": [0.4, 0.6, 0.8, 1.0, 0.9, 0.7, 0.5, 0.3],
+      "sections": [
+        {"label": "build", "start": 0.0, "end": 60.0},
+        {"label": "climax", "start": 60.0, "end": 120.0},
+        {"label": "resolution", "start": 120.0, "end": 180.0}
+      ],
+      "peak_moments": [75.0],
+      "_file_size": 3500000
+    },
+    "epidemic_reverent_03_dawn.mp3": {
+      "duration_seconds": 300.0,
+      "tempo_bpm": 70.0,
+      "key": "G",
+      "mode": "major",
+      "energy_curve": [0.1, 0.2, 0.3, 0.4, 0.5, 0.5, 0.4, 0.3, 0.2, 0.1],
+      "sections": [
+        {"label": "intro", "start": 0.0, "end": 60.0},
+        {"label": "build", "start": 60.0, "end": 150.0},
+        {"label": "climax", "start": 150.0, "end": 210.0},
+        {"label": "resolution", "start": 210.0, "end": 300.0}
+      ],
+      "peak_moments": [175.0],
+      "_file_size": 6000000
+    }
+  }
+}

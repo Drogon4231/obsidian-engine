@@ -1,0 +1,12 @@
+pre-commit:
+  parallel: true
+  commands:
+    py-lint:
+      glob: "*.py"
+      exclude: "remotion/"
+      run: ruff check --select E,F,W --ignore E501,E402 {staged_files}
+    ts-lint:
+      glob: "*.{ts,tsx}"
+      run: cd remotion && npm run lint
+    no-secrets:
+      run: git diff --cached --diff-filter=ACM | grep -qE "(API_KEY|SECRET|PASSWORD|WEBHOOK_URL)\s*=" && echo "BLOCKED: possible secret in staged files" && exit 1 || true

@@ -1,0 +1,8 @@
+# The Obsidian Archive — Railway deployment config
+[build]
+builder        = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand      = "python3 scheduler.py --daemon"
+restartPolicyType = "ALWAYS"

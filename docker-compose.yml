@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  obsidian:
+    build: .
+    container_name: obsidian-archive
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist outputs, music, and credentials between restarts
+      - ./outputs:/app/outputs
+      - ./remotion/public/music:/app/remotion/public/music
+      - ./youtube_token.json:/app/youtube_token.json
+      - ./client_secrets.json:/app/client_secrets.json:ro
+      # Persist intelligence data (DNA scores, analytics, optimizer reports)
+      - ./channel_insights.json:/app/channel_insights.json
+      - ./lessons_learned.json:/app/lessons_learned.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

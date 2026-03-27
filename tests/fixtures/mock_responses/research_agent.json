@@ -1,0 +1,39 @@
+{
+  "topic": "The Mysterious Disappearance of Flight 19",
+  "era": "cold_war",
+  "core_facts": [
+    "Flight 19 consisted of five TBM Avenger torpedo bombers",
+    "All 14 crew members were lost on December 5, 1945",
+    "The flight departed from Fort Lauderdale Naval Air Station",
+    "Lt. Charles Taylor led the formation",
+    "A Martin Mariner search plane with 13 crew also vanished"
+  ],
+  "key_figures": [
+    {"name": "Lt. Charles Taylor", "role": "Flight leader", "significance": "Experienced pilot whose compass failure triggered the crisis"},
+    {"name": "Lt. Robert Cox", "role": "Senior flight instructor", "significance": "First to intercept Taylor's distress transmissions"}
+  ],
+  "timeline": [
+    {"date": "December 5, 1945 14:10", "event": "Flight 19 departs Fort Lauderdale"},
+    {"date": "December 5, 1945 15:45", "event": "Taylor reports both compasses malfunctioning"},
+    {"date": "December 5, 1945 19:04", "event": "Last transmission received from Flight 19"},
+    {"date": "December 5, 1945 19:30", "event": "Martin Mariner dispatched and subsequently lost"}
+  ],
+  "suppressed_details": [
+    "Taylor had requested to be excused from the flight that day",
+    "The Navy initially blamed Taylor, then changed verdict under pressure from his mother"
+  ],
+  "primary_sources": [
+    "Navy Board of Investigation Report, 1946",
+    "Fort Lauderdale Naval Air Station flight logs"
+  ],
+  "contradictions": [
+    "Taylor was considered experienced, yet became disoriented on a familiar route"
+  ],
+  "archival_gems": [
+    "Taylor's last known words: 'We'll fly west until we hit the beach or run out of gas'"
+  ],
+  "research_gaps": [
+    "Exact crash location never determined",
+    "No wreckage ever recovered despite extensive searches"
+  ]
+}

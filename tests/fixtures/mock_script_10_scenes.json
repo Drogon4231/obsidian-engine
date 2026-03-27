@@ -1,0 +1,78 @@
+{
+  "topic": "The Mysterious Disappearance of Flight 19",
+  "era": "cold_war",
+  "title": "The Night 5 Planes Vanished Without a Trace",
+  "hook": "December 5th, 1945. Five torpedo bombers lift off from Fort Lauderdale. None of them come back.",
+  "scenes": [
+    {
+      "scene_number": 1,
+      "text": "December 5th, 1945. Five torpedo bombers lift off from Fort Lauderdale. None of them come back.",
+      "mood": "dark",
+      "narrative_function": "hook",
+      "image_prompt": "Five TBM Avenger torpedo bombers in formation against a darkening sky, 1945"
+    },
+    {
+      "scene_number": 2,
+      "text": "Flight 19 was a routine training exercise. Fourteen men, five planes, a simple navigation triangle over the Bahamas. Lieutenant Charles Taylor had flown the route dozens of times.",
+      "mood": "cold",
+      "narrative_function": "exposition",
+      "image_prompt": "A navigation map on a desk showing the triangular route over the Bahamas, vintage 1940s style"
+    },
+    {
+      "scene_number": 3,
+      "text": "At 3:45 PM, Taylor radioed the tower. His compasses had failed. Both of them. He couldn't tell which direction was west.",
+      "mood": "tense",
+      "narrative_function": "question",
+      "image_prompt": "Close-up of a compass spinning erratically inside a military cockpit, sweat on the pilot's hand"
+    },
+    {
+      "scene_number": 4,
+      "text": "The tower told him to fly west toward the sun. But Taylor was convinced he was over the Florida Keys, not the Bahamas. He turned the formation north — deeper into the Atlantic.",
+      "mood": "tense",
+      "narrative_function": "answer",
+      "image_prompt": "Aerial view of five planes banking northward over open ocean, late afternoon sun low on the horizon"
+    },
+    {
+      "scene_number": 5,
+      "text": "For the next two hours, increasingly panicked radio transmissions painted a picture of total disorientation. The fuel gauges crept toward empty.",
+      "mood": "dramatic",
+      "narrative_function": "escalation",
+      "image_prompt": "Radio operator in a dark control tower pressing headphones to his ears, static visualized"
+    },
+    {
+      "scene_number": 6,
+      "text": "Then the Navy did something extraordinary. They sent a Martin Mariner flying boat — a massive search and rescue plane — with a crew of thirteen to find Flight 19.",
+      "mood": "dramatic",
+      "narrative_function": "escalation",
+      "image_prompt": "A Martin Mariner flying boat taking off from dark waters, searchlights cutting through clouds"
+    },
+    {
+      "scene_number": 7,
+      "text": "The Mariner disappeared too. Twenty-seven men, six aircraft. Gone. Not a single piece of wreckage was ever recovered.",
+      "mood": "dark",
+      "narrative_function": "reveal",
+      "image_prompt": "Empty dark ocean surface at twilight, no wreckage, just endless water stretching to the horizon"
+    },
+    {
+      "scene_number": 8,
+      "text": "There is something unsettling about the ocean when it refuses to give back what it takes. No oil slick. No debris field. No bodies.",
+      "mood": "reverent",
+      "narrative_function": "breathing_room",
+      "image_prompt": "Calm dark ocean surface under starlight, reflections of stars on water, hauntingly beautiful"
+    },
+    {
+      "scene_number": 9,
+      "text": "The Navy investigation concluded that Taylor became disoriented and led the formation out to sea until they ran out of fuel. The Mariner likely exploded — they were known for fuel vapor leaks.",
+      "mood": "cold",
+      "narrative_function": "exposition",
+      "image_prompt": "Official Navy investigation documents spread on a desk, black and white photographs of the missing crew"
+    },
+    {
+      "scene_number": 10,
+      "text": "But Taylor's mother fought that conclusion. And she won. The official cause was changed to 'reasons unknown.' Because sometimes the ocean keeps its secrets. And we are left to wonder.",
+      "mood": "reverent",
+      "narrative_function": "conclusion",
+      "image_prompt": "A mother holding a framed photograph of her son in Navy uniform, gazing out a window at the sea"
+    }
+  ]
+}

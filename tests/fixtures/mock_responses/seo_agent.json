@@ -1,0 +1,28 @@
+{
+  "topic": "The Mysterious Disappearance of Flight 19",
+  "title_variants": [
+    {"title": "The Night 5 Planes Vanished Without a Trace", "character_count": 48, "strategy": "mystery_gap"},
+    {"title": "Why the Navy Erased Flight 19's Cause of Death", "character_count": 49, "strategy": "authority_challenge"},
+    {"title": "5 Planes Took Off. None Came Back.", "character_count": 36, "strategy": "stark_contrast"}
+  ],
+  "recommended_title": "The Night 5 Planes Vanished Without a Trace",
+  "description": {
+    "hook_lines": "December 5th, 1945. Five torpedo bombers lift off from Fort Lauderdale on a routine training mission. None of them come back.",
+    "full_description": "December 5th, 1945. Five torpedo bombers lift off from Fort Lauderdale on a routine training mission. None of them come back.\n\nFlight 19 — fourteen men, five planes — vanished over the Atlantic. Then the rescue plane sent to find them vanished too. Twenty-seven men. Six aircraft. Not a single piece of wreckage ever recovered.\n\nSources:\n- Navy Board of Investigation Report, 1946\n- Fort Lauderdale Naval Air Station flight logs",
+    "hashtags": ["#Flight19", "#BermudaTriangle", "#MilitaryMystery", "#DarkHistory"]
+  },
+  "tags": ["flight 19", "bermuda triangle", "missing planes", "navy mystery", "1945", "cold war", "military history", "unsolved mystery"],
+  "chapter_markers": [
+    {"timestamp": "0:00", "label": "The Last Takeoff"},
+    {"timestamp": "1:30", "label": "A Routine Mission"},
+    {"timestamp": "3:00", "label": "Compasses Fail"},
+    {"timestamp": "5:00", "label": "Lost Over the Atlantic"},
+    {"timestamp": "7:00", "label": "The Rescue That Vanished"},
+    {"timestamp": "8:30", "label": "Reasons Unknown"}
+  ],
+  "thumbnail_text": "5 PLANES VANISHED",
+  "thumbnail_concepts": [
+    {"concept": "Split frame: formation of planes on left, empty ocean on right", "text_overlay": "5 PLANES VANISHED", "rationale": "Visual contrast between presence and absence"}
+  ],
+  "end_screen_cta": "The ocean has more secrets. Click here for another one."
+}

@@ -1,0 +1,38 @@
+{
+  "topic": "The Mysterious Disappearance of Flight 19",
+  "verification_summary": "All major claims verified. One date correction needed.",
+  "verified_claims": [
+    {
+      "claim": "Five TBM Avenger torpedo bombers departed Fort Lauderdale on December 5, 1945",
+      "verdict": "VERIFIED_SCHOLARLY",
+      "sources": ["Navy Board of Investigation Report, 1946", "Naval History and Heritage Command"],
+      "confidence": "HIGH",
+      "scholarly_confidence": "high",
+      "is_common_myth": false,
+      "myth_notes": null,
+      "notes": "Exact date and aircraft type confirmed"
+    },
+    {
+      "claim": "A Martin Mariner search plane with 13 crew also disappeared",
+      "verdict": "VERIFIED_SCHOLARLY",
+      "sources": ["Navy Board of Investigation Report, 1946"],
+      "confidence": "HIGH",
+      "scholarly_confidence": "high",
+      "is_common_myth": false,
+      "myth_notes": null,
+      "notes": "SS Gaines Mills reported witnessing an explosion consistent with the Mariner"
+    }
+  ],
+  "verification_sources": [
+    {"url": "https://www.history.navy.mil/", "title": "Naval History and Heritage Command", "type": "scholarly"},
+    {"url": "https://example.com/navy-report", "title": "Navy Board of Investigation Report", "type": "primary_source"}
+  ],
+  "script_corrections": [],
+  "twist_reveal_verified": true,
+  "twist_reveal_sources": ["Navy Board of Investigation amendment records"],
+  "overall_verdict": "APPROVED",
+  "source_list_for_description": [
+    "Navy Board of Investigation Report, 1946",
+    "Naval History and Heritage Command"
+  ]
+}
