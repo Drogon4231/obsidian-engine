@@ -1718,6 +1718,262 @@ def api_optimizer_pause():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Setup Wizard API ─────────────────────────────────────────────────────────
+
+_SETUP_API_KEYS = [
+    {"key": "ANTHROPIC_API_KEY", "label": "Anthropic (Claude)", "required": True,
+     "help": "https://console.anthropic.com", "category": "llm"},
+    {"key": "ELEVENLABS_API_KEY", "label": "ElevenLabs (TTS)", "required": True,
+     "help": "https://elevenlabs.io", "category": "tts"},
+    {"key": "FAL_KEY", "label": "fal.ai (Images)", "required": True,
+     "help": "https://fal.ai/dashboard/keys", "category": "images"},
+    {"key": "PEXELS_API_KEY", "label": "Pexels (Stock Footage)", "required": True,
+     "help": "https://www.pexels.com/api/new/", "category": "footage"},
+    {"key": "SUPABASE_URL", "label": "Supabase URL", "required": False,
+     "help": "https://supabase.com", "category": "database"},
+    {"key": "SUPABASE_KEY", "label": "Supabase Key", "required": False,
+     "help": "https://supabase.com", "category": "database"},
+    {"key": "TELEGRAM_BOT_TOKEN", "label": "Telegram Bot Token", "required": False,
+     "help": "https://t.me/BotFather", "category": "notifications"},
+    {"key": "TELEGRAM_CHAT_ID", "label": "Telegram Chat ID", "required": False,
+     "help": "https://t.me/userinfobot", "category": "notifications"},
+]
+
+
+@app.route("/api/setup/status")
+@require_key
+def api_setup_status():
+    """Return setup status: which keys are configured, current profile, providers."""
+    keys_status = []
+    for entry in _SETUP_API_KEYS:
+        val = os.getenv(entry["key"], "")
+        keys_status.append({
+            **entry,
+            "configured": bool(val and val.strip()),
+        })
+
+    # Read current profile
+    profile = "documentary"
+    try:
+        from core.config import cfg
+        profile = cfg.get("profile", "documentary")
+    except Exception:
+        pass
+
+    # List available profiles
+    profiles_dir = BASE_DIR / "profiles"
+    available_profiles = []
+    if profiles_dir.exists():
+        for f in sorted(profiles_dir.glob("*.yaml")):
+            if f.name.startswith("_"):
+                continue
+            name = f.stem
+            # Read first few lines for description
+            desc = ""
+            try:
+                with open(f) as fh:
+                    for line in fh:
+                        if line.strip().startswith("description:"):
+                            desc = line.split(":", 1)[1].strip().strip('"').strip("'")
+                            break
+            except Exception:
+                pass
+            available_profiles.append({"name": name, "description": desc})
+
+    # Current providers
+    providers = {}
+    try:
+        from core.config import cfg
+        psec = cfg.get("providers")
+        if psec:
+            for ptype in ["llm", "tts", "images", "footage", "upload"]:
+                section = psec.get(ptype)
+                if section:
+                    providers[ptype] = section.get("name") or section.get("provider", "")
+    except Exception:
+        pass
+
+    # Available providers
+    try:
+        from providers.registry import list_providers
+        available_providers = list_providers()
+    except Exception:
+        available_providers = {}
+
+    # Check if setup is complete (all required keys present)
+    required_configured = all(
+        k["configured"] for k in keys_status if k["required"]
+    )
+
+    return jsonify({
+        "keys": keys_status,
+        "profile": profile,
+        "available_profiles": available_profiles,
+        "providers": providers,
+        "available_providers": available_providers,
+        "setup_complete": required_configured,
+    })
+
+
+@app.route("/api/setup/validate", methods=["POST"])
+@require_key
+def api_setup_validate():
+    """Validate an API key by making a lightweight test call."""
+    data = request.get_json(silent=True) or {}
+    key_name = data.get("key", "")
+    key_value = data.get("value", "")
+
+    if not key_name or not key_value:
+        return jsonify({"valid": False, "error": "Missing key name or value"}), 400
+
+    result = {"key": key_name, "valid": False, "error": ""}
+
+    try:
+        if key_name == "ANTHROPIC_API_KEY":
+            import requests
+            r = requests.get(
+                "https://api.anthropic.com/v1/models",
+                headers={
+                    "x-api-key": key_value,
+                    "anthropic-version": "2023-06-01",
+                },
+                timeout=10,
+            )
+            result["valid"] = r.status_code == 200
+
+        elif key_name == "ELEVENLABS_API_KEY":
+            import requests
+            r = requests.get(
+                "https://api.elevenlabs.io/v1/user",
+                headers={"xi-api-key": key_value},
+                timeout=10,
+            )
+            result["valid"] = r.status_code == 200
+            if result["valid"]:
+                info = r.json()
+                sub = info.get("subscription", {})
+                result["info"] = {
+                    "character_limit": sub.get("character_limit", 0),
+                    "character_count": sub.get("character_count", 0),
+                }
+
+        elif key_name == "FAL_KEY":
+            # fal.ai doesn't have a simple validation endpoint,
+            # but we can check format
+            result["valid"] = key_value.startswith("fal_") or len(key_value) > 20
+            if not result["valid"]:
+                result["error"] = "Key should start with 'fal_'"
+
+        elif key_name == "PEXELS_API_KEY":
+            import requests
+            r = requests.get(
+                "https://api.pexels.com/videos/search",
+                headers={"Authorization": key_value},
+                params={"query": "test", "per_page": 1},
+                timeout=10,
+            )
+            result["valid"] = r.status_code == 200
+
+        elif key_name in ("SUPABASE_URL", "SUPABASE_KEY"):
+            # Just check format
+            if key_name == "SUPABASE_URL":
+                result["valid"] = key_value.startswith("http")
+            else:
+                result["valid"] = len(key_value) > 20
+        elif key_name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+            result["valid"] = len(key_value) > 5
+        else:
+            result["error"] = f"Unknown key: {key_name}"
+
+        if not result["valid"] and not result["error"]:
+            result["error"] = "Key validation failed"
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return jsonify(result)
+
+
+@app.route("/api/setup/save", methods=["POST"])
+@require_key
+def api_setup_save():
+    """Save setup configuration to .env and obsidian.yaml."""
+    data = request.get_json(silent=True) or {}
+    saved = []
+    errors = []
+
+    # Save API keys to .env
+    keys_to_save = data.get("keys", {})
+    if keys_to_save:
+        env_path = BASE_DIR / ".env"
+        try:
+            # Read existing .env
+            existing = {}
+            if env_path.exists():
+                with open(env_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            existing[k.strip()] = v.strip()
+
+            # Update with new keys
+            for k, v in keys_to_save.items():
+                if v and v.strip():
+                    existing[k] = v.strip()
+                    # Also set in current process
+                    os.environ[k] = v.strip()
+                    saved.append(k)
+
+            # Write .env
+            with open(env_path, "w") as f:
+                f.write("# Obsidian Engine — Environment Configuration\n")
+                f.write("# Auto-saved by Setup Wizard\n\n")
+                for k, v in sorted(existing.items()):
+                    f.write(f"{k}={v}\n")
+
+        except Exception as e:
+            errors.append(f"Failed to save .env: {e}")
+
+    # Save profile to obsidian.yaml
+    profile = data.get("profile")
+    providers_config = data.get("providers")
+    if profile or providers_config:
+        yaml_path = BASE_DIR / "obsidian.yaml"
+        try:
+            content = yaml_path.read_text()
+
+            if profile:
+                import re
+                content = re.sub(
+                    r'^profile:\s*\S+',
+                    f'profile: {profile}',
+                    content,
+                    flags=re.MULTILINE,
+                )
+                saved.append(f"profile={profile}")
+
+            if providers_config:
+                for ptype, pname in providers_config.items():
+                    import re
+                    # Find the provider section and update the name
+                    pattern = rf'(  {ptype}:\n    name:\s*)\S+'
+                    replacement = rf'\g<1>{pname}'
+                    content = re.sub(pattern, replacement, content)
+                    saved.append(f"providers.{ptype}={pname}")
+
+            yaml_path.write_text(content)
+
+        except Exception as e:
+            errors.append(f"Failed to save obsidian.yaml: {e}")
+
+    return jsonify({
+        "saved": saved,
+        "errors": errors,
+        "success": len(errors) == 0,
+    })
+
+
 def require_login(f):
     @wraps(f)
     def wrapped(*args, **kwargs):

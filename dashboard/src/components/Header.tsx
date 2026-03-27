@@ -11,6 +11,7 @@ const VIEWS = [
   { id: 'intel', label: 'INTEL', key: '3' },
   { id: 'health', label: 'HEALTH', key: '4' },
   { id: 'tuning', label: 'TUNING', key: '5' },
+  { id: 'setup', label: 'SETUP', key: '6' },
 ] as const
 
 function switchView(id: string) {

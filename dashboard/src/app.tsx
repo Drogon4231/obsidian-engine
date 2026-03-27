@@ -14,6 +14,7 @@ import { QueueView } from './views/QueueView'
 import { IntelView } from './views/IntelView'
 import { HealthView } from './views/HealthView'
 import { TuningView } from './views/TuningView'
+import { SetupView } from './views/SetupView'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { toggleSound } from './utils/sound'
 import { showToast } from './components/Toast'
@@ -55,6 +56,7 @@ export function App() {
         case '3': switchView('intel'); break
         case '4': switchView('health'); break
         case '5': switchView('tuning'); break
+        case '6': switchView('setup'); break
         case 't':
         case 'T':
           quickTriggerOpen.value = true
@@ -95,6 +97,7 @@ export function App() {
           {view === 'intel' && <IntelView />}
           {view === 'health' && <HealthView />}
           {view === 'tuning' && <TuningView />}
+          {view === 'setup' && <SetupView />}
         </ErrorBoundary>
       </main>
       <ProgressBar />

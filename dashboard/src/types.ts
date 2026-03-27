@@ -210,3 +210,35 @@ export interface TuningData {
   history: OverrideHistoryEntry[]
   correlation: CorrelationResults
 }
+
+// ── Setup Wizard types ───────────────────────────────────────────────────────
+
+export interface SetupKeyStatus {
+  key: string
+  label: string
+  required: boolean
+  help: string
+  category: string
+  configured: boolean
+}
+
+export interface SetupProfile {
+  name: string
+  description: string
+}
+
+export interface SetupStatus {
+  keys: SetupKeyStatus[]
+  profile: string
+  available_profiles: SetupProfile[]
+  providers: Record<string, string>
+  available_providers: Record<string, string[]>
+  setup_complete: boolean
+}
+
+export interface SetupValidation {
+  key: string
+  valid: boolean
+  error: string
+  info?: Record<string, unknown>
+}

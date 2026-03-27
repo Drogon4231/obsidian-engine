@@ -1,5 +1,5 @@
 import { batch } from '@preact/signals'
-import type { PulseResponse, DashboardResponse, LastRunData, ScheduleEntry, RunDetail, ErrorEntry, AgentStat } from '../types'
+import type { PulseResponse, DashboardResponse, LastRunData, ScheduleEntry, RunDetail, ErrorEntry, AgentStat, SetupStatus, SetupValidation } from '../types'
 import {
   pipelineStatus, isRunning, stageNum, topic, startedAt, finishedAt,
   analyticsRunning, queueDepth, errors24h, healthStatus, lastCostUsd,
@@ -180,4 +180,30 @@ export async function fetchAgentStats(days = 7) {
   const data = await apiFetch<AgentStat[]>(`/api/agent-stats?days=${days}`)
   agentStats.value = data
   return data
+}
+
+// ── Setup Wizard API ─────────────────────────────────────────────────────────
+
+export async function fetchSetupStatus(): Promise<SetupStatus> {
+  return apiFetch<SetupStatus>('/api/setup/status')
+}
+
+export async function validateSetupKey(key: string, value: string): Promise<SetupValidation> {
+  return apiFetch<SetupValidation>('/api/setup/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  })
+}
+
+export async function saveSetupConfig(config: {
+  keys?: Record<string, string>
+  profile?: string
+  providers?: Record<string, string>
+}): Promise<{ saved: string[]; errors: string[]; success: boolean }> {
+  return apiFetch('/api/setup/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
 }
