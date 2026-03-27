@@ -47,12 +47,11 @@ MODEL_TIERS = {
 
 _TIER_ORDER = ["light", "full", "premium"]
 
-# Default tier per agent name (matches the numbered filenames without extension)
-AGENT_DEFAULTS = {
-    # Premium (Opus) — creative judgment
+# Default tier per agent name — loaded from obsidian.yaml → agents.*
+# Falls back to hardcoded defaults if config unavailable.
+_HARDCODED_AGENT_DEFAULTS = {
     "04_script_writer":        {"tier": "premium", "sla_seconds": 120},
     "04b_script_doctor":       {"tier": "full",    "sla_seconds": 60},
-    # Full (Sonnet) — complex reasoning
     "00_topic_discovery":      {"tier": "full",    "sla_seconds": 90},
     "01_research_agent":       {"tier": "full",    "sla_seconds": 90},
     "02_originality_agent":    {"tier": "full",    "sla_seconds": 60},
@@ -66,7 +65,6 @@ AGENT_DEFAULTS = {
     "short_script_agent":      {"tier": "full",    "sla_seconds": 45},
     "short_storyboard_agent":  {"tier": "full",    "sla_seconds": 45},
     "thumbnail_agent":         {"tier": "full",    "sla_seconds": 45},
-    # Light (Haiku) — mechanical / classification
     "06_seo_agent":            {"tier": "light",   "sla_seconds": 30},
     "tts_format_agent":        {"tier": "light",   "sla_seconds": 20},
     "comment_analyzer":        {"tier": "light",   "sla_seconds": 30},
@@ -74,6 +72,23 @@ AGENT_DEFAULTS = {
     "hook_scorer":             {"tier": "light",   "sla_seconds": 15},
     "localization_pipeline":   {"tier": "full",    "sla_seconds": 60},
 }
+
+def _load_agent_defaults() -> dict:
+    """Load agent routing from obsidian.yaml, falling back to hardcoded defaults."""
+    defaults = _HARDCODED_AGENT_DEFAULTS.copy()
+    try:
+        from core.config import cfg
+        for name, settings in cfg.agents.items():
+            s = settings.to_dict() if hasattr(settings, 'to_dict') else settings
+            defaults[name] = {
+                "tier": s.get("tier", "full"),
+                "sla_seconds": s.get("sla", 60),
+            }
+    except Exception:
+        pass
+    return defaults
+
+AGENT_DEFAULTS = _load_agent_defaults()
 
 
 def _resolve_model(agent_name: str, effort_offset: int = 0) -> str:

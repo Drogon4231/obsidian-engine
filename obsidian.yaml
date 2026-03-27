@@ -1,0 +1,194 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Obsidian Engine — Master Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+# All pipeline behavior is controlled from this single file.
+# Values here override the defaults in core/pipeline_config.py.
+# Environment variables (in .env) override values here for secrets/API keys.
+#
+# To customize: copy this file, edit your copy, run with:
+#   OBSIDIAN_CONFIG=my_config.yaml python run_pipeline.py "topic"
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ── Voice & Narration ─────────────────────────────────────────────────────────
+# ElevenLabs voice IDs — browse at https://elevenlabs.io/voice-library
+# Set to null to use env vars ELEVENLABS_NARRATOR_VOICE_ID / ELEVENLABS_QUOTE_VOICE_ID
+voice:
+  narrator_id: "JBFqnCBsd6RMkjVDRZzb"     # "George" — deep, authoritative
+  quote_id: "pNInz6obpgDQGcFmaJgB"         # "Adam" — authoritative male
+  model: "eleven_v3"                         # ElevenLabs model version
+
+  # Delivery styles (stability, similarity_boost, style: 0.0–1.0)
+  body:
+    stability: 0.38
+    similarity_boost: 0.82
+    style: 0.60
+    use_speaker_boost: true
+  hook:
+    stability: 0.28
+    similarity_boost: 0.85
+    style: 0.75
+    use_speaker_boost: true
+  quote:
+    stability: 0.50
+    similarity_boost: 0.75
+    style: 0.40
+    use_speaker_boost: true
+
+  # Speed (0.5–2.0, lower = slower)
+  speed_body: 0.76
+  speed_hook: 0.82
+  speed_quote: 0.74
+
+  # Inter-scene pause durations (seconds)
+  pause_reveal: 1.8
+  pause_breathing: 1.2
+  pause_act_transition: 0.9
+  pause_default: 0.4
+
+
+# ── AI Models ─────────────────────────────────────────────────────────────────
+models:
+  # Anthropic Claude model IDs
+  premium: "claude-opus-4-6"          # Creative tasks (script writing)
+  full: "claude-sonnet-4-6"           # Complex reasoning (research, analysis)
+  light: "claude-haiku-4-5-20251001"  # Fast tasks (SEO, classification)
+
+  # Image generation
+  image_provider: "recraft"            # "recraft" or "flux"
+  image_quality_threshold: 7           # Reject images below this (1-10)
+  image_max_retries: 3                 # Max regeneration attempts
+
+  # fal.ai endpoints
+  fal_recraft: "fal-ai/recraft/v3/text-to-image"
+  fal_flux: "fal-ai/flux-pro/v1.1-ultra"
+  fal_flux_kontext: "fal-ai/flux-pro/kontext"
+
+  # Default max output tokens per LLM call
+  max_tokens: 4000
+
+
+# ── Agent Routing ─────────────────────────────────────────────────────────────
+# Tier: premium (Opus), full (Sonnet), light (Haiku)
+# SLA: max expected response time in seconds (for monitoring, not enforced)
+agents:
+  "04_script_writer":        { tier: premium, sla: 120 }
+  "04b_script_doctor":       { tier: full,    sla: 60  }
+  "00_topic_discovery":      { tier: full,    sla: 90  }
+  "01_research_agent":       { tier: full,    sla: 90  }
+  "02_originality_agent":    { tier: full,    sla: 60  }
+  "03_narrative_architect":  { tier: full,    sla: 90  }
+  "05_fact_verification":    { tier: full,    sla: 90  }
+  "07_scene_breakdown":      { tier: full,    sla: 60  }
+  "07b_visual_continuity":   { tier: full,    sla: 45  }
+  "12_analytics_agent":      { tier: full,    sla: 120 }
+  "content_auditor_captions": { tier: light,  sla: 30  }
+  "content_auditor_master":   { tier: full,   sla: 60  }
+  "short_script_agent":      { tier: full,    sla: 45  }
+  "short_storyboard_agent":  { tier: full,    sla: 45  }
+  "thumbnail_agent":         { tier: full,    sla: 45  }
+  "06_seo_agent":            { tier: light,   sla: 30  }
+  "tts_format_agent":        { tier: light,   sla: 20  }
+  "comment_analyzer":        { tier: light,   sla: 30  }
+  "compliance_checker":      { tier: light,   sla: 30  }
+  "hook_scorer":             { tier: light,   sla: 15  }
+  "localization_pipeline":   { tier: full,    sla: 60  }
+
+
+# ── Script ────────────────────────────────────────────────────────────────────
+script:
+  min_words: 1000
+  max_words: 2500
+  short_min_words: 80
+  short_max_words: 180
+
+
+# ── Video Rendering ───────────────────────────────────────────────────────────
+video:
+  fps: 30
+  crf: 15                   # Quality (0-51, lower = better). 15 is good for YouTube.
+  long_width: 1920
+  long_height: 1080
+  short_width: 1080
+  short_height: 1920
+  max_scene_seconds: 12.0
+
+
+# ── Audio ─────────────────────────────────────────────────────────────────────
+audio:
+  chunk_max_chars: 500       # Max characters per TTS chunk
+  tail_buffer_sec: 1.5       # Silence after audio ends
+  min_duration: 300          # 5 minutes minimum
+  max_duration: 1200         # 20 minutes maximum
+
+
+# ── Quality Gates ─────────────────────────────────────────────────────────────
+quality:
+  min_research_facts: 5
+  min_research_figures: 2
+  min_tags: 5
+  min_scenes: 5
+  min_video_size_mb: 50
+  enforce_wpm_gate: false
+
+
+# ── Cost & Budget ─────────────────────────────────────────────────────────────
+cost:
+  budget_max_usd: 0.0        # Max spend per run. 0 = unlimited.
+  cleanup_after_upload: true  # Delete intermediate files after upload
+  cleanup_warn_disk_gb: 50   # Warn when outputs/ exceeds this size
+
+
+# ── API Settings ──────────────────────────────────────────────────────────────
+api:
+  max_retries: 5
+  backoff_base: 2            # Seconds, doubles each retry
+  timeout: 120               # Request timeout in seconds
+
+
+# ── Webhook & Server ──────────────────────────────────────────────────────────
+server:
+  port: 8080
+  max_triggers_per_hour: 3
+  max_calls_per_minute: 10
+
+
+# ── Scheduling ────────────────────────────────────────────────────────────────
+schedule:
+  videos_per_week: 1
+  publish_days: ["tuesday"]
+  publish_time: "09:00"       # UTC
+  discover_time: "08:00"      # UTC
+  analytics_hour: 6           # UTC hour for analytics runs
+
+  topic_discovery:
+    day: "monday"
+    hour: 8
+
+  pipeline:
+    day: "tuesday"
+    hour: 9
+
+
+# ── Competitive Intelligence ──────────────────────────────────────────────────
+# YouTube channel IDs to track. Remove or replace with channels in your niche.
+competitors:
+  "UCGzfpg1YiBIlgcODQI4lDvQ": "Voices of the Past"
+  "UCMmaBzfCCwZ2KqaBJjkj0fw": "Kings and Generals"
+  "UCT6Y5JJPKe_JDMivpKgVXew": "Fall of Civilizations"
+  "UCY2-GCz1VMEn94FkyOuRlHg": "Invicta"
+  "UCNIuvl7V8zACPpTmmNIqP0A": "OverSimplified"
+  "UCfdNM3NAhaBOXCafH7krzrA": "The Infographics Show"
+  "UCUcyEsEjhPEDf69RRVhRh4A": "Weird History"
+  "UCCODtTcd5M1JavPCOr_Uydg": "Extra History / Extra Credits"
+
+
+# ── Topic Scoring ─────────────────────────────────────────────────────────────
+scoring:
+  maturity_threshold: 15       # Videos before "mature" tier
+  max_score: 1.0
+  min_score: 0.0
+  default_topic_score: 0.5
+  max_topics_per_discovery: 20
+  experiment_cadence_default: 5
+  experiment_cadence_throttled: 8

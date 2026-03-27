@@ -28,20 +28,16 @@ def run_audio(script_data, scene_data=None):
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
     if not ELEVENLABS_API_KEY:
         raise RuntimeError("ELEVENLABS_API_KEY not set — cannot generate audio")
-    VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
-    MAX_CHARS = 500  # smaller chunks = more natural prosody per segment
-
-    # Legacy voice presets (used when no scene data available)
-    VOICE_BODY = {"stability": 0.38, "similarity_boost": 0.82,
-                  "style": 0.60, "use_speaker_boost": True}
-    VOICE_HOOK = {"stability": 0.28, "similarity_boost": 0.85,
-                  "style": 0.75, "use_speaker_boost": True}
-    VOICE_SPEED = 0.88  # Documentary pace — slower than default 1.0
-
-    # Secondary voice for quoted speech (e.g. historical figures)
-    QUOTE_VOICE_ID = "pNInz6obpgDQGcFmaJgB"  # "Adam" — authoritative male
-    VOICE_QUOTE = {"stability": 0.50, "similarity_boost": 0.75,
-                   "style": 0.40, "use_speaker_boost": True}
+    # Voice config from obsidian.yaml (via pipeline_config)
+    from core.pipeline_config import (
+        NARRATOR_VOICE_ID, QUOTE_VOICE_ID as _QUOTE_VID,
+        VOICE_BODY, VOICE_HOOK, VOICE_QUOTE, VOICE_SPEED_BODY,
+        AUDIO_CHUNK_MAX_CHARS,
+    )
+    VOICE_ID = NARRATOR_VOICE_ID
+    MAX_CHARS = AUDIO_CHUNK_MAX_CHARS
+    VOICE_SPEED = VOICE_SPEED_BODY
+    QUOTE_VOICE_ID = _QUOTE_VID
 
     # Split text into chunks at sentence boundaries
     def split_chunks(text):

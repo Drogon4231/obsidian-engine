@@ -28,8 +28,9 @@ def run_short_audio(short_script_data):
         from mutagen.mp3 import MP3
 
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-    VOICE_ID  = "JBFqnCBsd6RMkjVDRZzb"
-    MAX_CHARS = 500  # smaller chunks = more natural prosody
+    from core.pipeline_config import NARRATOR_VOICE_ID, AUDIO_CHUNK_MAX_CHARS
+    VOICE_ID  = NARRATOR_VOICE_ID
+    MAX_CHARS = AUDIO_CHUNK_MAX_CHARS
 
     # Voice presets — build from overrides (never mutate originals, Fix 144)
     from core.param_overrides import get_override

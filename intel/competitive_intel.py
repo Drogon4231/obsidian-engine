@@ -27,20 +27,27 @@ INTEL_FILE = OUTPUT_DIR / "competitive_intel.json"
 SHORTS_THRESHOLD = 60
 
 # ── Competitor channel IDs ────────────────────────────────────────────────────
-# Dark history / documentary niche channels.
+# Loaded from obsidian.yaml → competitors.
 # Format: { "channel_id": "Channel Name" }
-COMPETITORS = {
-    "UCGzfpg1YiBIlgcODQI4lDvQ": "Voices of the Past",
-    "UCMmaBzfCCwZ2KqaBJjkj0fw": "Kings and Generals",
-    "UCT6Y5JJPKe_JDMivpKgVXew": "Fall of Civilizations",
-    "UCY2-GCz1VMEn94FkyOuRlHg": "Invicta",
-    "UCNIuvl7V8zACPpTmmNIqP0A": "OverSimplified",
-    "UCv_vLHiWVBh_ES9ww625JQ": "Historia Civilis",        # PLACEHOLDER — verify
-    "UCFbxlp3NxEo0PuBOvITwXwA": "Forgotten History",      # PLACEHOLDER — verify
-    "UCfdNM3NAhaBOXCafH7krzrA": "The Infographics Show",
-    "UCUcyEsEjhPEDf69RRVhRh4A": "Weird History",
-    "UCCODtTcd5M1JavPCOr_Uydg": "Extra History / Extra Credits",
-}
+# Users should replace these with channels in their own niche.
+try:
+    from core.config import cfg as _cfg
+    COMPETITORS = dict(_cfg.competitors.items()) if hasattr(_cfg, 'competitors') and _cfg.competitors else {}
+except Exception:
+    COMPETITORS = {}
+
+# Fallback: if config has no competitors, use documentary niche defaults
+if not COMPETITORS:
+    COMPETITORS = {
+        "UCGzfpg1YiBIlgcODQI4lDvQ": "Voices of the Past",
+        "UCMmaBzfCCwZ2KqaBJjkj0fw": "Kings and Generals",
+        "UCT6Y5JJPKe_JDMivpKgVXew": "Fall of Civilizations",
+        "UCY2-GCz1VMEn94FkyOuRlHg": "Invicta",
+        "UCNIuvl7V8zACPpTmmNIqP0A": "OverSimplified",
+        "UCfdNM3NAhaBOXCafH7krzrA": "The Infographics Show",
+        "UCUcyEsEjhPEDf69RRVhRh4A": "Weird History",
+        "UCCODtTcd5M1JavPCOr_Uydg": "Extra History / Extra Credits",
+    }
 
 # ── YouTube API helpers ───────────────────────────────────────────────────────
 

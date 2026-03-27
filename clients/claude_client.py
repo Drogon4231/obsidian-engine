@@ -26,10 +26,16 @@ if _env_file.exists():
                 _v = _v[1:-1]
             os.environ.setdefault(_k.strip(), _v)
 
-# Model constants
-OPUS   = "claude-opus-4-6"
-SONNET = "claude-sonnet-4-6"
-HAIKU  = "claude-haiku-4-5-20251001"
+# Model constants (from obsidian.yaml → models.*)
+try:
+    from core.config import cfg as _cfg
+    OPUS   = _cfg.models.premium
+    SONNET = _cfg.models.full
+    HAIKU  = _cfg.models.light
+except Exception:
+    OPUS   = "claude-opus-4-6"
+    SONNET = "claude-sonnet-4-6"
+    HAIKU  = "claude-haiku-4-5-20251001"
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 

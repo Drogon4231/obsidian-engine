@@ -1,111 +1,108 @@
 """
-Pipeline configuration — edit these instead of modifying agent code.
-Import with: from pipeline_config import * (or specific values)
+Pipeline configuration — reads from obsidian.yaml via core.config.
+
+All module-level constants are preserved for backward compatibility.
+To customize, edit obsidian.yaml (not this file).
 """
 
 import os
 from pathlib import Path
 
+from core.config import cfg
+
 # ── Project paths ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUTS_DIR = BASE_DIR / "outputs"
 
-# Voice settings
-NARRATOR_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George
-QUOTE_VOICE_ID = "pNInz6obpgDQGcFmaJgB"      # Adam
-VOICE_BODY = {"stability": 0.38, "similarity_boost": 0.82, "style": 0.60, "use_speaker_boost": True}
-VOICE_HOOK = {"stability": 0.28, "similarity_boost": 0.85, "style": 0.75, "use_speaker_boost": True}
-VOICE_QUOTE = {"stability": 0.50, "similarity_boost": 0.75, "style": 0.40, "use_speaker_boost": True}
-VOICE_SPEED_BODY = 0.76
-VOICE_SPEED_HOOK = 0.82
-VOICE_SPEED_QUOTE = 0.74
+# ── Voice settings (from obsidian.yaml → voice.*) ────────────────────────────
+NARRATOR_VOICE_ID = cfg.voice.narrator_id
+QUOTE_VOICE_ID = cfg.voice.quote_id
+VOICE_BODY = cfg.voice.body.to_dict()
+VOICE_HOOK = cfg.voice.hook.to_dict()
+VOICE_QUOTE = cfg.voice.quote.to_dict()
+VOICE_SPEED_BODY = cfg.voice.speed_body
+VOICE_SPEED_HOOK = cfg.voice.speed_hook
+VOICE_SPEED_QUOTE = cfg.voice.speed_quote
 
-# Image generation
-IMAGE_MODEL = os.getenv("IMAGE_MODEL", "recraft")  # "recraft" or "flux"
-IMAGE_QUALITY_THRESHOLD = 7  # Reject images scored below this (1-10)
-IMAGE_MAX_RETRIES = 3        # Regenerate up to N times if quality is low
+# ── Image generation (from obsidian.yaml → models.*) ─────────────────────────
+IMAGE_MODEL = cfg.models.image_provider
+IMAGE_QUALITY_THRESHOLD = cfg.models.image_quality_threshold
+IMAGE_MAX_RETRIES = cfg.models.image_max_retries
 
-# Script constraints
-SCRIPT_MIN_WORDS = 1000
-SCRIPT_MAX_WORDS = 2500
-SHORT_SCRIPT_MIN_WORDS = 80
-SHORT_SCRIPT_MAX_WORDS = 180
+# ── Script constraints (from obsidian.yaml → script.*) ───────────────────────
+SCRIPT_MIN_WORDS = cfg.script.min_words
+SCRIPT_MAX_WORDS = cfg.script.max_words
+SHORT_SCRIPT_MIN_WORDS = cfg.script.short_min_words
+SHORT_SCRIPT_MAX_WORDS = cfg.script.short_max_words
 
-# Video rendering
-VIDEO_FPS = 30
-VIDEO_CRF = 15  # Lower = higher quality (0-51 scale). YouTube re-encodes, so 15 gives it more data.
-LONG_VIDEO_WIDTH = 1920
-LONG_VIDEO_HEIGHT = 1080
-SHORT_VIDEO_WIDTH = 1080
-SHORT_VIDEO_HEIGHT = 1920
+# ── Video rendering (from obsidian.yaml → video.*) ───────────────────────────
+VIDEO_FPS = cfg.video.fps
+VIDEO_CRF = cfg.video.crf
+LONG_VIDEO_WIDTH = cfg.video.long_width
+LONG_VIDEO_HEIGHT = cfg.video.long_height
+SHORT_VIDEO_WIDTH = cfg.video.short_width
+SHORT_VIDEO_HEIGHT = cfg.video.short_height
 
-# Scene splitting
-MAX_SCENE_SECONDS = 12.0
+# ── Scene splitting ──────────────────────────────────────────────────────────
+MAX_SCENE_SECONDS = cfg.video.max_scene_seconds
 
-# Audio
-AUDIO_CHUNK_MAX_CHARS = 500
-AUDIO_TAIL_BUFFER_SEC = 1.5
+# ── Audio (from obsidian.yaml → audio.*) ─────────────────────────────────────
+AUDIO_CHUNK_MAX_CHARS = cfg.audio.chunk_max_chars
+AUDIO_TAIL_BUFFER_SEC = cfg.audio.tail_buffer_sec
 
-# Scheduling (cron-like, 24h UTC)
-SCHEDULE_TOPIC_DISCOVERY = {"day": "monday", "hour": 8}
-SCHEDULE_PIPELINE = {"day": "tuesday", "hour": 9}
-SCHEDULE_ANALYTICS = {"hour": 6}
+# ── Scheduling (from obsidian.yaml → schedule.*) ─────────────────────────────
+SCHEDULE_TOPIC_DISCOVERY = cfg.schedule.topic_discovery.to_dict()
+SCHEDULE_PIPELINE = cfg.schedule.pipeline.to_dict()
+SCHEDULE_ANALYTICS = {"hour": cfg.schedule.analytics_hour}
 
-# Quality gates
-MIN_RESEARCH_FACTS = 5
-MIN_RESEARCH_FIGURES = 2
-MIN_TAGS = 5
-MIN_SCENES = 5
-MIN_AUDIO_DURATION = 300
-MAX_AUDIO_DURATION = 1200
-MIN_VIDEO_SIZE_MB = 50
+# ── Quality gates (from obsidian.yaml → quality.*) ───────────────────────────
+MIN_RESEARCH_FACTS = cfg.quality.min_research_facts
+MIN_RESEARCH_FIGURES = cfg.quality.min_research_figures
+MIN_TAGS = cfg.quality.min_tags
+MIN_SCENES = cfg.quality.min_scenes
+MIN_AUDIO_DURATION = cfg.audio.min_duration
+MAX_AUDIO_DURATION = cfg.audio.max_duration
+MIN_VIDEO_SIZE_MB = cfg.quality.min_video_size_mb
 
-# WPM gate enforcement (off by default — enable when speed tuning is validated)
-ENFORCE_WPM_GATE = os.getenv("ENFORCE_WPM_GATE", "false").lower() == "true"
+# ── WPM gate enforcement ────────────────────────────────────────────────────
+ENFORCE_WPM_GATE = cfg.quality.enforce_wpm_gate
 
-# Cost budget — maximum USD spend per pipeline run
-# Pipeline aborts after completing the current stage if this threshold is exceeded.
-# Set to 0 to disable budget enforcement.
-COST_BUDGET_MAX_USD = float(os.getenv("COST_BUDGET_MAX_USD", "0"))
+# ── Cost budget (from obsidian.yaml → cost.*) ────────────────────────────────
+COST_BUDGET_MAX_USD = cfg.cost.budget_max_usd
 
-# Storage cleanup (after successful YouTube upload)
-# Intermediate media files (frames, chunks, raw video) are deleted to reclaim disk.
-# State files are KEPT — they feed the optimizer's cross-run trend analysis.
-# Set to False to keep all media (useful for debugging).
-CLEANUP_AFTER_UPLOAD = True
-# Max total size (GB) for outputs/ before health check warns
-CLEANUP_WARN_DISK_GB = 50  # Railway plan: 100 GB shared disk
+# ── Storage cleanup ──────────────────────────────────────────────────────────
+CLEANUP_AFTER_UPLOAD = cfg.cost.cleanup_after_upload
+CLEANUP_WARN_DISK_GB = cfg.cost.cleanup_warn_disk_gb
 
-# API retry settings
-API_MAX_RETRIES = 5
-API_BACKOFF_BASE = 2  # seconds, doubles each retry
-API_TIMEOUT = 120     # seconds
+# ── API retry settings (from obsidian.yaml → api.*) ─────────────────────────
+API_MAX_RETRIES = cfg.api.max_retries
+API_BACKOFF_BASE = cfg.api.backoff_base
+API_TIMEOUT = cfg.api.timeout
 
-# Webhook security
-WEBHOOK_MAX_TRIGGERS_PER_HOUR = 3
-WEBHOOK_MAX_CALLS_PER_MINUTE = 10
+# ── Webhook security (from obsidian.yaml → server.*) ────────────────────────
+WEBHOOK_MAX_TRIGGERS_PER_HOUR = cfg.server.max_triggers_per_hour
+WEBHOOK_MAX_CALLS_PER_MINUTE = cfg.server.max_calls_per_minute
 
-# Discord notifications
+# ── Discord notifications ───────────────────────────────────────────────────
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "")
 
-# Dashboard authentication (leave empty to disable login requirement)
+# ── Dashboard authentication ────────────────────────────────────────────────
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")
 
 # ── Topic Discovery Scoring ─────────────────────────────────────────────────
 SCORING_CONFIG = {
-    "maturity_threshold": 15,           # Videos needed before channel is "mature"
-    "max_score": 1.0,
-    "min_score": 0.0,
-    "default_topic_score": 0.5,
-    "max_topics_per_discovery": 20,
-    "experiment_cadence_default": 5,
-    "experiment_cadence_throttled": 8,
+    "maturity_threshold": cfg.scoring.maturity_threshold,
+    "max_score": cfg.scoring.max_score,
+    "min_score": cfg.scoring.min_score,
+    "default_topic_score": cfg.scoring.default_topic_score,
+    "max_topics_per_discovery": cfg.scoring.max_topics_per_discovery,
+    "experiment_cadence_default": cfg.scoring.experiment_cadence_default,
+    "experiment_cadence_throttled": cfg.scoring.experiment_cadence_throttled,
 }
 
 # Dynamic adjustment magnitudes by channel maturity tier
-# Keys: era_fatigue, audience_request, trending, cost_efficiency, shorts_subs,
-#        search_demand, engagement, subscriber_conversion, traffic_source,
-#        content_pattern, demographic_alignment
+# These are kept as hardcoded dicts since they're deeply interconnected
+# and rarely need per-deployment customization.
 SCORING_ADJUSTMENTS_EARLY = {        # < 5 videos
     "era_fatigue": -0.15,
     "audience_request": +0.20,
@@ -162,83 +159,40 @@ SCORING_ADJUSTMENTS_MATURE = {       # 15+ videos
 }
 
 # ── Signal Thresholds ────────────────────────────────────────────────────────
-# Internal thresholds for each scoring signal function.
-# Defaults come from youtube_knowledge_base.py benchmarks for history/edu channels.
-# As your channel grows, override these based on your own analytics data.
 SCORING_THRESHOLDS = {
-    # -- Subscriber conversion --
-    # YouTube avg sub rate: 0.3% for long-form, 0.1% for shorts (knowledge base)
-    # "high" = 1.5x your channel avg; starts data-driven once analytics accumulate
     "sub_conversion_high_multiplier": 1.5,
-
-    # -- Engagement --
-    # Avg retention for edu channels: 42-48% (knowledge base by video length)
-    # Signal fires when era retention > channel average; this sets minimum videos
     "engagement_min_video_count": 1,
-
-    # -- Search demand --
-    # YouTube search drives ~20% of traffic for edu channels (knowledge base)
-    # Require 2+ keyword matches with 4+ char words to avoid noise
     "search_demand_min_word_len": 4,
     "search_demand_min_matches": 2,
-
-    # -- Traffic source dominance --
-    # Knowledge base: browse ~40%, suggested ~30%, search ~20%, external ~10%
-    # "Dominant" = significantly above baseline distribution
-    "traffic_search_dominant_pct": 50,     # 2.5x normal search share
-    "traffic_browse_dominant_pct": 50,     # 1.25x normal browse share
-    "traffic_suggested_dominant_pct": 40,  # 1.33x normal suggested share
+    "traffic_search_dominant_pct": 50,
+    "traffic_browse_dominant_pct": 50,
+    "traffic_suggested_dominant_pct": 40,
     "traffic_min_specificity_signals": 2,
     "traffic_min_click_signals": 2,
-
-    # -- Demographic alignment --
-    # Only boost for audience segments that are >= this % of total viewers
     "demographic_min_audience_pct": 20,
-
-    # -- Topic quality scoring --
-    # Proper nouns: specific names/places increase searchability & CTR
     "quality_min_proper_nouns": 2,
     "quality_proper_noun_bonus": 0.05,
     "quality_no_proper_noun_penalty": -0.05,
-    # Dates/numbers: add specificity (knowledge base: specific titles get higher CTR)
     "quality_date_bonus": 0.03,
-    # Comparison format: "vs" titles get high engagement (knowledge base)
     "quality_comparison_bonus": 0.05,
-    # Emotional words: dark/shocking/secret drive CTR in this niche
     "quality_min_emotional_words": 2,
-    "quality_emotional_high_bonus": 0.05,   # 2+ emotional words
-    "quality_emotional_low_bonus": 0.02,    # 1 emotional word
-    # Broad topic penalty
+    "quality_emotional_high_bonus": 0.05,
+    "quality_emotional_low_bonus": 0.02,
     "quality_broad_penalty": -0.10,
-    # Title length: knowledge base says 7-11 words, 45-65 chars is optimal
     "quality_min_title_words": 3,
     "quality_max_title_words": 15,
     "quality_title_length_penalty": -0.05,
-    # Quality multiplier clamp range
     "quality_multiplier_min": 0.8,
     "quality_multiplier_max": 1.2,
-
-    # -- Experiment strategy --
-    # Eras with fewer than this many videos are "underexplored"
     "experiment_underexplored_videos": 3,
-
-    # -- Queue management --
-    # When queue is below low threshold, generate max topics
-    # When above high threshold, generate half
     "queue_low_threshold": 5,
     "queue_high_threshold": 15,
     "queue_medium_ratio": 0.75,
     "queue_high_ratio": 0.50,
     "queue_minimum_topics": 10,
-
-    # -- Word matching --
-    # Minimum characters for a word to count as "significant" in matching
     "matching_min_word_len": 4,
-    # Minimum word matches OR one long word (6+ chars) for audience/trending match
     "matching_min_word_matches": 2,
     "matching_long_word_len": 6,
-
-    # -- Competitive intelligence --
     "competitive_gap_min_views": 10000,
     "competitive_gap_min_word_matches": 2,
     "competitive_gap_max_age_days": 180,

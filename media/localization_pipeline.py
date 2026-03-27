@@ -25,7 +25,11 @@ from core.agent_wrapper import call_agent
 # ── Config ────────────────────────────────────────────────────────────────────
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George — same as main pipeline
+try:
+    from core.pipeline_config import NARRATOR_VOICE_ID
+    VOICE_ID = NARRATOR_VOICE_ID
+except Exception:
+    VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George (fallback)
 MAX_CHARS = 500  # chunk size at sentence boundaries
 
 SUPPORTED_LANGUAGES = {

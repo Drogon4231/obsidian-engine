@@ -58,8 +58,8 @@ MOOD_VOICE_SETTINGS = _ORIGINAL_MOOD_VOICE_SETTINGS
 def _get_scene_voice_settings(scene, scene_idx, total_scenes):
     """Determine voice settings based on scene metadata.
     Returns (voice_settings_dict, voice_id, speed)."""
-    VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"
-    QUOTE_VOICE_ID = "pNInz6obpgDQGcFmaJgB"
+    from core.pipeline_config import NARRATOR_VOICE_ID, QUOTE_VOICE_ID
+    VOICE_ID = NARRATOR_VOICE_ID
 
     mood = (scene.get("mood", "") or "dark").lower()
     is_reveal = scene.get("is_reveal_moment", False)

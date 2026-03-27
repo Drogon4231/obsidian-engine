@@ -17,7 +17,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George
+try:
+    from core.pipeline_config import NARRATOR_VOICE_ID
+    VOICE_ID = NARRATOR_VOICE_ID
+except Exception:
+    VOICE_ID = "JBFqnCBsd6RMkjVDRZzb"  # George (fallback)
 MAX_CHARS = 4500  # safe under 5000 limit
 
 def split_into_chunks(text, max_chars=MAX_CHARS):
