@@ -71,3 +71,4 @@ state.json
 # PDFs (generated docs)
 docs/*.pdf
 docs/*.tex
+CLAUDE.md
