@@ -242,6 +242,38 @@ def save_video(topic, title, youtube_url, youtube_id, script_path,
             return result.data[0] if result.data else None
         raise
 
+def save_music_metadata(topic: str, music_data: dict) -> None:
+    """Update the videos table with music metadata after render.
+
+    music_data keys: track_id, title, mood, source, adapted, stems_used, bpm, match_score.
+    Silently ignores missing columns (graceful for pre-migration databases).
+    """
+    try:
+        client = get_client()
+        payload = {}
+        field_map = {
+            "track_id": "music_track_id",
+            "title": "music_track_title",
+            "mood": "music_mood",
+            "source": "music_source",
+            "adapted": "music_adapted",
+            "stems_used": "music_stems_used",
+            "bpm": "music_bpm",
+            "match_score": "music_match_score",
+        }
+        for src_key, db_col in field_map.items():
+            val = music_data.get(src_key)
+            if val is not None:
+                payload[db_col] = val
+
+        if payload:
+            _with_retry(lambda: client.table("videos").update(payload).eq("topic", topic).execute())
+            print(f"✓ Saved music metadata for: {topic[:40]}")
+    except Exception as e:
+        # Graceful: missing columns or table issues should not break pipeline
+        print(f"⚠ Music metadata save skipped: {e}")
+
+
 def get_all_topics_done():
     client = get_client()
     result = client.table("topics").select("topic")\

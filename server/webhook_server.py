@@ -1375,6 +1375,17 @@ def api_dashboard():
                 "per_video_stats": insights.get("per_video_stats", []),
                 "channel_health": insights.get("channel_health", {}),
             }
+        elif section == "music":
+            mp = insights.get("music_performance", {})
+            result["music"] = {
+                "mood_performance": mp.get("mood_performance", {}),
+                "bpm_performance": mp.get("bpm_performance", {}),
+                "source_distribution": mp.get("source_distribution", {}),
+                "adaptation_impact": mp.get("adaptation_impact", {}),
+                "stems_impact": mp.get("stems_impact", {}),
+                "recommendations": mp.get("recommendations", []),
+                "sample_size": mp.get("sample_size", 0),
+            }
         elif section == "summary":
             history = _load_run_history()
             result["summary"] = _build_summary(insights, history)

@@ -8,7 +8,7 @@ import { renderBars } from '../components/renderers/BarRenderer'
 import { renderHBars } from '../components/renderers/HBarRenderer'
 import type { SummarySignal } from '../types'
 
-const TABS = ['summary', 'performance', 'content', 'audience', 'config'] as const
+const TABS = ['summary', 'performance', 'content', 'audience', 'music', 'config'] as const
 type Tab = typeof TABS[number]
 
 export function IntelView() {
@@ -59,6 +59,8 @@ export function IntelView() {
           <ContentTab data={data as Record<string, unknown>} />
         ) : tab === 'audience' ? (
           <AudienceTab data={data as Record<string, unknown>} />
+        ) : tab === 'music' ? (
+          <MusicIntelTab data={data as Record<string, unknown>} />
         ) : tab === 'config' ? (
           <ConfigTab data={data as Record<string, unknown>} />
         ) : (
@@ -289,6 +291,103 @@ function ExpandableList({ title, items, limit }: { title: string; items: unknown
         </button>
       )}
     </DataCard>
+  )
+}
+
+function MusicIntelTab({ data }: { data: Record<string, unknown> }) {
+  const moodPerf = data.mood_performance as Record<string, { avg_views: number; avg_retention: number; video_count: number }> | undefined
+  const bpmPerf = data.bpm_performance as Record<string, { avg_retention: number; count: number }> | undefined
+  const recs = data.recommendations as string[] | undefined
+  const adapt = data.adaptation_impact as Record<string, number> | undefined
+  const stems = data.stems_impact as Record<string, number> | undefined
+  const sourceDist = data.source_distribution as Record<string, number> | undefined
+
+  const moodEntries = moodPerf ? Object.entries(moodPerf).sort(([, a], [, b]) => b.avg_retention - a.avg_retention) : []
+  const bpmEntries = bpmPerf ? Object.entries(bpmPerf).sort(([, a], [, b]) => b.avg_retention - a.avg_retention) : []
+
+  return (
+    <div class="space-y-4">
+      {/* Summary cards */}
+      <div class="grid grid-cols-3 gap-2">
+        {moodEntries.length > 0 && (
+          <div class="p-3 rounded bg-bg-2 border border-success/30">
+            <div class="text-xs text-dim">Best Mood</div>
+            <div class="text-bright capitalize">{moodEntries[0][0]}</div>
+            <div class="text-xs text-dim">{moodEntries[0][1].avg_retention}% retention</div>
+          </div>
+        )}
+        {adapt && adapt.adapted_count > 0 && (
+          <div class="p-3 rounded bg-bg-2 border border-border">
+            <div class="text-xs text-dim">Adapted vs Looped</div>
+            <div class="text-bright">{((adapt.adapted_avg_retention || 0) - (adapt.looped_avg_retention || 0)).toFixed(1)}%</div>
+            <div class="text-xs text-dim">retention lift</div>
+          </div>
+        )}
+        {bpmEntries.length > 0 && (
+          <div class="p-3 rounded bg-bg-2 border border-border">
+            <div class="text-xs text-dim">Best BPM</div>
+            <div class="text-bright">{bpmEntries[0][0]}</div>
+            <div class="text-xs text-dim">{bpmEntries[0][1].avg_retention}% retention</div>
+          </div>
+        )}
+      </div>
+
+      {/* Mood performance bars */}
+      {moodEntries.length > 0 && (
+        <DataCard title="Mood Performance">
+          <div class="space-y-1">
+            {moodEntries.map(([mood, d]) => (
+              <div key={mood} class="flex items-center gap-2 text-xs">
+                <span class="w-20 text-dim capitalize">{mood}</span>
+                <div class="flex-1 h-2 bg-bg-2 rounded overflow-hidden">
+                  <div class="h-full bg-running/60 rounded" style={{ width: `${Math.min(100, d.avg_retention)}%` }} />
+                </div>
+                <span class="text-dim w-16 text-right">{d.avg_retention}% · {d.video_count}v</span>
+              </div>
+            ))}
+          </div>
+        </DataCard>
+      )}
+
+      {/* BPM performance */}
+      {bpmEntries.length > 0 && (
+        <DataCard title="BPM Performance">
+          <div class="space-y-1">
+            {bpmEntries.map(([range, d]) => (
+              <div key={range} class="flex items-center gap-2 text-xs">
+                <span class="w-20 text-dim">{range}</span>
+                <div class="flex-1 h-2 bg-bg-2 rounded overflow-hidden">
+                  <div class="h-full bg-accent/60 rounded" style={{ width: `${Math.min(100, d.avg_retention)}%` }} />
+                </div>
+                <span class="text-dim w-16 text-right">{d.avg_retention}% · {d.count}v</span>
+              </div>
+            ))}
+          </div>
+        </DataCard>
+      )}
+
+      {/* Source distribution */}
+      {sourceDist && Object.keys(sourceDist).length > 0 && (
+        <DataCard title="Music Source">
+          <div class="flex gap-3 text-xs">
+            {Object.entries(sourceDist).map(([src, count]) => (
+              <span key={src} class="text-dim">{src}: <span class="text-text">{count}</span></span>
+            ))}
+          </div>
+        </DataCard>
+      )}
+
+      {/* Recommendations */}
+      {recs && recs.length > 0 && (
+        <DataCard title="Recommendations">
+          <ul class="space-y-1">
+            {recs.map((r, i) => (
+              <li key={i} class="text-xs text-text">• {r}</li>
+            ))}
+          </ul>
+        </DataCard>
+      )}
+    </div>
   )
 }
 

@@ -7,6 +7,19 @@ import { Skeleton } from '../components/Skeleton'
 interface MusicData {
   total_tracks?: number
   tracks_by_mood?: Record<string, number>
+  api_status?: 'connected' | 'expired' | 'no_key' | 'error'
+  key_valid?: boolean
+  subscription_plan?: string
+  recent_selections?: Array<{
+    track_title: string
+    mood: string
+    source: string
+    video_topic?: string
+  }>
+  usage_stats?: {
+    total_downloads: number
+    total_adaptations: number
+  }
   [k: string]: unknown
 }
 
@@ -181,8 +194,30 @@ function MusicPanel({ data }: { data: MusicData }) {
   const moodEntries = Object.entries(moods).sort(([, a], [, b]) => (b as number) - (a as number))
 
   return (
-    <div>
-      <div class="text-sm text-dim mb-2">Total: <span class="text-bright">{data.total_tracks ?? 0}</span> tracks</div>
+    <div class="space-y-3">
+      {/* API Status */}
+      {data.api_status && data.api_status !== 'no_key' && (
+        <div class="flex items-center gap-2">
+          <span class={`w-2 h-2 rounded-full ${
+            data.api_status === 'connected' ? 'bg-success' :
+            data.api_status === 'expired' ? 'bg-error' : 'bg-dim'
+          }`} />
+          <span class="text-xs text-dim">
+            Epidemic Sound: {data.api_status}
+          </span>
+          {data.api_status === 'expired' && (
+            <span class="text-xs text-error">Key expired</span>
+          )}
+          {data.subscription_plan && (
+            <span class="text-xs text-dim">({data.subscription_plan})</span>
+          )}
+        </div>
+      )}
+
+      {/* Track count */}
+      <div class="text-sm text-dim">Total: <span class="text-bright">{data.total_tracks ?? 0}</span> tracks</div>
+
+      {/* Mood bars */}
       {moodEntries.length > 0 && (
         <div class="space-y-1">
           {moodEntries.map(([mood, count]) => {
@@ -197,6 +232,27 @@ function MusicPanel({ data }: { data: MusicData }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Recent selections */}
+      {data.recent_selections && data.recent_selections.length > 0 && (
+        <div>
+          <div class="text-xs text-dim mb-1">Recent selections:</div>
+          {data.recent_selections.slice(0, 5).map((sel, i) => (
+            <div key={i} class="flex justify-between text-xs py-0.5">
+              <span class="text-text truncate max-w-[60%]">{sel.track_title}</span>
+              <span class="text-dim">{sel.mood} · {sel.source}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Usage stats */}
+      {data.usage_stats && (
+        <div class="flex gap-3 text-xs text-dim">
+          <span>Downloads: {data.usage_stats.total_downloads}</span>
+          <span>Adaptations: {data.usage_stats.total_adaptations}</span>
         </div>
       )}
     </div>

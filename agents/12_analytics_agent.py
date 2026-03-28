@@ -781,6 +781,137 @@ def compute_shorts_intelligence(shorts_rows: list, long_rows: list) -> dict:
     }
 
 
+def compute_music_performance_correlation(videos: list, analytics_rows: list) -> dict:
+    """Correlate music attributes with video performance.
+
+    Reads music_mood, music_source, music_adapted, music_stems_used, music_bpm
+    from Supabase videos table. Correlates against retention and views.
+    """
+    if not videos or not analytics_rows:
+        return {}
+
+    analytics_by_id = {}
+    for row in analytics_rows:
+        vid = row.get("supabase_video_id") or row.get("video_id", "")
+        if vid:
+            analytics_by_id[str(vid)] = row
+
+    paired = []
+    for v in videos:
+        vid = str(v.get("id", ""))
+        if vid not in analytics_by_id:
+            continue
+        mood = v.get("music_mood")
+        if not mood:
+            continue
+        a = analytics_by_id[vid]
+        paired.append({
+            "mood": mood,
+            "source": v.get("music_source", "unknown"),
+            "adapted": v.get("music_adapted", False),
+            "stems_used": v.get("music_stems_used", False),
+            "bpm": v.get("music_bpm", 0),
+            "views": a.get("views", 0),
+            "retention": a.get("avg_view_percentage", 0),
+        })
+
+    if len(paired) < 3:
+        return {"sample_size": len(paired), "note": "Insufficient data"}
+
+    # Mood performance
+    mood_perf = {}
+    for p in paired:
+        m = p["mood"]
+        if m not in mood_perf:
+            mood_perf[m] = {"views": [], "retention": [], "count": 0}
+        mood_perf[m]["views"].append(p["views"])
+        mood_perf[m]["retention"].append(p["retention"])
+        mood_perf[m]["count"] += 1
+    mood_performance = {
+        m: {
+            "avg_views": round(sum(d["views"]) / len(d["views"])),
+            "avg_retention": round(sum(d["retention"]) / len(d["retention"]), 1),
+            "video_count": d["count"],
+        }
+        for m, d in mood_perf.items() if d["count"] >= 1
+    }
+
+    # Source distribution
+    source_dist = {}
+    for p in paired:
+        s = p["source"]
+        source_dist[s] = source_dist.get(s, 0) + 1
+
+    # Adaptation impact
+    adapted = [p for p in paired if p["adapted"]]
+    not_adapted = [p for p in paired if not p["adapted"]]
+    adaptation_impact = {}
+    if adapted and not_adapted:
+        adaptation_impact = {
+            "adapted_avg_retention": round(sum(p["retention"] for p in adapted) / len(adapted), 1),
+            "looped_avg_retention": round(sum(p["retention"] for p in not_adapted) / len(not_adapted), 1),
+            "adapted_count": len(adapted),
+            "looped_count": len(not_adapted),
+        }
+
+    # Stems impact
+    with_stems = [p for p in paired if p["stems_used"]]
+    without_stems = [p for p in paired if not p["stems_used"]]
+    stems_impact = {}
+    if with_stems and without_stems:
+        stems_impact = {
+            "stems_avg_retention": round(sum(p["retention"] for p in with_stems) / len(with_stems), 1),
+            "no_stems_avg_retention": round(sum(p["retention"] for p in without_stems) / len(without_stems), 1),
+            "stems_count": len(with_stems),
+            "no_stems_count": len(without_stems),
+        }
+
+    # BPM performance buckets
+    bpm_buckets = {"60-80": [], "80-100": [], "100-120": [], "120+": []}
+    for p in paired:
+        bpm = p.get("bpm", 0) or 0
+        if bpm < 80:
+            bpm_buckets["60-80"].append(p)
+        elif bpm < 100:
+            bpm_buckets["80-100"].append(p)
+        elif bpm < 120:
+            bpm_buckets["100-120"].append(p)
+        else:
+            bpm_buckets["120+"].append(p)
+    bpm_performance = {
+        k: {
+            "avg_retention": round(sum(p["retention"] for p in v) / len(v), 1),
+            "count": len(v),
+        }
+        for k, v in bpm_buckets.items() if v
+    }
+
+    # Build recommendations
+    recommendations = []
+    if mood_performance:
+        best_mood = max(mood_performance, key=lambda m: mood_performance[m]["avg_retention"])
+        recommendations.append(
+            f"Best mood: {best_mood} ({mood_performance[best_mood]['avg_retention']}% avg retention)"
+        )
+    if adaptation_impact:
+        lift = adaptation_impact.get("adapted_avg_retention", 0) - adaptation_impact.get("looped_avg_retention", 0)
+        if lift > 0:
+            recommendations.append(f"Adapted tracks: +{lift:.1f}% retention vs looped")
+    if bpm_performance:
+        best_bpm = max(bpm_performance, key=lambda k: bpm_performance[k]["avg_retention"])
+        recommendations.append(f"Best BPM range: {best_bpm}")
+
+    return {
+        "sample_size": len(paired),
+        "mood_performance": mood_performance,
+        "source_distribution": source_dist,
+        "adaptation_impact": adaptation_impact,
+        "stems_impact": stems_impact,
+        "bpm_performance": bpm_performance,
+        "recommendations": recommendations,
+    }
+
+
 def compute_shorts_long_correlation(shorts_rows: list, long_rows: list,
                                      all_videos: list) -> dict:
     """
@@ -2045,6 +2176,16 @@ def run() -> dict:
                   f"{content_correlation.get('videos_with_pipeline_data', 0)} with full pipeline data")
     except Exception as e:
         print(f"[Analytics] Content quality correlation skipped: {e}")
+
+    # Music-to-performance correlation
+    try:
+        music_correlation = compute_music_performance_correlation(videos, video_analytics_rows)
+        if music_correlation and music_correlation.get("sample_size", 0) >= 3:
+            insights["music_performance"] = music_correlation
+            print(f"[Analytics] Music performance: {music_correlation['sample_size']} videos, "
+                  f"recommendations: {len(music_correlation.get('recommendations', []))}")
+    except Exception as e:
+        print(f"[Analytics] Music correlation skipped: {e}")
 
     # Channel stats (compute before write)
     try:

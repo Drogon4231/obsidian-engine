@@ -468,4 +468,28 @@ def run_convert(manifest, audio_data, topic="", era=""):
     scenes_with_images = sum(1 for s in remotion_scenes if s.get("ai_image"))
     logger.info(f"[Convert] ✓ {len(remotion_scenes)} scenes, {len(words)} words, {scenes_with_images} images")
     logger.info(f"[Convert] ✓ Duration: {total_duration/60:.1f} min")
+
+    # Save music metadata to Supabase for analytics
+    if topic and music_file:
+        try:
+            from clients.supabase_client import save_music_metadata
+            _mf = music_file or ""
+            _source = "epidemic_api" if "epidemic_api_" in _mf else (
+                "epidemic_local" if "epidemic_" in _mf else "kevin_macleod"
+            )
+            _mood_counts = {}
+            for _s in remotion_scenes:
+                _m = _s.get("mood", "dark")
+                _mood_counts[_m] = _mood_counts.get(_m, 0) + 1
+            _dominant = max(_mood_counts, key=_mood_counts.get) if _mood_counts else "dark"
+            save_music_metadata(topic, {
+                "track_id": _music_track_id,
+                "mood": _dominant,
+                "source": _source,
+                "adapted": music_adapted,
+                "stems_used": bool(music_stems),
+            })
+        except Exception as _meta_err:
+            logger.warning(f"[Convert] Music metadata save failed (non-fatal): {_meta_err}")
+
     return video_data

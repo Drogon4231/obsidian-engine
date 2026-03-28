@@ -1067,6 +1067,56 @@ def get_content_quality_recommendation(agent_key: str) -> str:
         return ""
 
 
+def get_music_intelligence() -> str:
+    """Data-backed music selection guidance from performance analytics.
+
+    Injected into agent 07 (scene breakdown) and convert.py music selection.
+    Returns empty string if insufficient data.
+    """
+    try:
+        insights = load_insights()
+        mp = insights.get("music_performance", {})
+        if not mp or mp.get("sample_size", 0) < 3:
+            return ""
+
+        lines = ["MUSIC INTELLIGENCE (data-backed):"]
+
+        mood_perf = mp.get("mood_performance", {})
+        if mood_perf:
+            best = max(mood_perf, key=lambda m: mood_perf[m].get("avg_retention", 0))
+            d = mood_perf[best]
+            lines.append(f"  Best mood: {best} ({d['avg_retention']}% avg retention, "
+                         f"{d['video_count']} videos)")
+
+        bpm_perf = mp.get("bpm_performance", {})
+        if bpm_perf:
+            best_bpm = max(bpm_perf, key=lambda k: bpm_perf[k].get("avg_retention", 0))
+            lines.append(f"  Best BPM range: {best_bpm} "
+                         f"({bpm_perf[best_bpm]['avg_retention']}% retention)")
+
+        adapt = mp.get("adaptation_impact", {})
+        if adapt:
+            lift = adapt.get("adapted_avg_retention", 0) - adapt.get("looped_avg_retention", 0)
+            if abs(lift) > 0.5:
+                lines.append(f"  Adapted vs looped: {lift:+.1f}% retention")
+
+        stems = mp.get("stems_impact", {})
+        if stems:
+            lift = stems.get("stems_avg_retention", 0) - stems.get("no_stems_avg_retention", 0)
+            if abs(lift) > 0.5:
+                lines.append(f"  Stem ducking impact: {lift:+.1f}% retention")
+
+        recs = mp.get("recommendations", [])
+        if recs:
+            lines.append("  Recommendations:")
+            for r in recs[:3]:
+                lines.append(f"    - {r}")
+
+        return "\n".join(lines) if len(lines) > 1 else ""
+    except Exception:
+        return ""
+
+
 # ── Content pattern helpers (used by multiple functions) ──────────────────────
 
 def _get_content_pattern_summary(insights: dict) -> str:

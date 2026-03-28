@@ -262,6 +262,41 @@ def send_weekly_report() -> bool:
     except Exception:
         pass
 
+    # ── Music analytics ────────────────────────────────────────────────────
+    try:
+        insights_path = Path(__file__).resolve().parent.parent / "channel_insights.json"
+        if insights_path.exists():
+            with open(insights_path) as f:
+                _music_insights = json.load(f)
+            mp = _music_insights.get("music_performance", {})
+            if mp and mp.get("sample_size", 0) >= 3:
+                lines.append("\n🎵 *Music Analytics*")
+                mood_perf = mp.get("mood_performance", {})
+                if mood_perf:
+                    best_mood = max(mood_perf, key=lambda m: mood_perf[m].get("avg_retention", 0))
+                    lines.append(f"  Best mood: {best_mood} ({mood_perf[best_mood]['avg_retention']}% retention)")
+                src = mp.get("source_distribution", {})
+                if src:
+                    lines.append(f"  Sources: {', '.join(f'{k}={v}' for k, v in src.items())}")
+                adapt = mp.get("adaptation_impact", {})
+                if adapt and adapt.get("adapted_count", 0) > 0:
+                    lines.append(f"  Adapted: {adapt['adapted_count']} videos ({adapt.get('adapted_avg_retention', 0):.1f}% retention)")
+                recs = mp.get("recommendations", [])
+                if recs:
+                    lines.append(f"  💡 {recs[0]}")
+
+        # Epidemic Sound API key status
+        es_key = os.getenv("EPIDEMIC_SOUND_API_KEY", "")
+        if es_key:
+            try:
+                from clients.epidemic_client import EpidemicSoundClient
+                if not EpidemicSoundClient().check_key_valid():
+                    lines.append("\n⚠️ *Epidemic Sound API key expired* — regenerate at epidemicsound.com")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     # ── Queue depth ───────────────────────────────────────────────────────────
     try:
         from clients.supabase_client import get_client
