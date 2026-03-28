@@ -53,6 +53,11 @@ interface EndscreenRecommended {
 interface AudioConfig {
   ducking?: { speechVolume?: number; silenceVolume?: number; rampSeconds?: number };
   actMultipliers?: { act1?: number; act2?: number; act3?: number; ending?: number };
+  stemDucking?: {
+    bass?: { speechVolume?: number; silenceVolume?: number };
+    drums?: { speechVolume?: number; silenceVolume?: number };
+    instruments?: { speechVolume?: number; silenceVolume?: number };
+  };
 }
 interface VideoData {
   scenes: Scene[]; word_timestamps: WordTimestamp[]; total_duration_seconds: number;
@@ -555,7 +560,7 @@ export const ObsidianVideo: React.FC = () => {
             <Audio
               src={staticFile(data.music_stems.bass)}
               startFrom={Math.round((data.music_start_offset || 0) * fps)}
-              volume={(f) => stemVolume(f, 'bass', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              volume={(f) => stemVolume(f, 'bass', fps, totalDur, narrationMask, hasSecondary, data.scenes, audioConfig.stemDucking ?? {}, audioConfig.actMultipliers)}
               loop={!data.music_adapted}
             />
           )}
@@ -563,7 +568,7 @@ export const ObsidianVideo: React.FC = () => {
             <Audio
               src={staticFile(data.music_stems.drums)}
               startFrom={Math.round((data.music_start_offset || 0) * fps)}
-              volume={(f) => stemVolume(f, 'drums', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              volume={(f) => stemVolume(f, 'drums', fps, totalDur, narrationMask, hasSecondary, data.scenes, audioConfig.stemDucking ?? {}, audioConfig.actMultipliers)}
               loop={!data.music_adapted}
             />
           )}
@@ -571,7 +576,7 @@ export const ObsidianVideo: React.FC = () => {
             <Audio
               src={staticFile(data.music_stems.instruments)}
               startFrom={Math.round((data.music_start_offset || 0) * fps)}
-              volume={(f) => stemVolume(f, 'instruments', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              volume={(f) => stemVolume(f, 'instruments', fps, totalDur, narrationMask, hasSecondary, data.scenes, audioConfig.stemDucking ?? {}, audioConfig.actMultipliers)}
               loop={!data.music_adapted}
             />
           )}
