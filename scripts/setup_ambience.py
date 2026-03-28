@@ -48,6 +48,21 @@ AMBIENT_TRACKS = {
         "url": "https://cdn.pixabay.com/audio/2024/09/20/audio_926db0de3e.mp3",
         "desc": "Cathedral reverb atmosphere",
     },
+    "wonder": {
+        "file": "amb_wonder.mp3",
+        "url": "https://cdn.pixabay.com/audio/2024/02/14/audio_8f2e2d12f7.mp3",
+        "desc": "Ethereal cosmic atmosphere",
+    },
+    "warmth": {
+        "file": "amb_warmth.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/08/02/audio_884fe92c21.mp3",
+        "desc": "Gentle fireplace crackling",
+    },
+    "absurdity": {
+        "file": "amb_absurdity.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/10/12/audio_be9768d39e.mp3",
+        "desc": "Quirky carnival atmosphere",
+    },
 }
 
 

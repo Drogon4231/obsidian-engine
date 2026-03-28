@@ -108,20 +108,48 @@ def run_convert(manifest, audio_data, topic="", era=""):
                 shutil.copy2(src, dest)
                 ai_image_name = src.name
 
-        # Ambient sound per scene mood
+        # Ambient sound per scene mood — try Epidemic API first, fallback to local
         ambient_file = None
-        try:
-            from scripts.setup_ambience import get_ambient_file
-            ambient_file = get_ambient_file(scene.get("mood", "dark")) or None
-        except Exception:
-            pass
+        if os.getenv("EPIDEMIC_SOUND_API_KEY"):
+            try:
+                from media.epidemic_sfx_manager import get_ambient_for_scene
+                ambient_file = get_ambient_for_scene(scene) or None
+            except Exception:
+                pass
+        if not ambient_file:
+            try:
+                from scripts.setup_ambience import get_ambient_file
+                ambient_file = get_ambient_file(scene.get("mood", "dark")) or None
+            except Exception:
+                pass
 
-        # SFX one-shot per scene (only on key moments)
+        # SFX one-shot per scene (only on key moments) — try Epidemic API first
         sfx_file = None
+        sfx_start_offset = 0
         try:
-            from scripts.setup_sfx import get_sfx_file, should_play_sfx
+            from scripts.setup_sfx import should_play_sfx
             if should_play_sfx(scene):
-                sfx_file = get_sfx_file(scene.get("mood", "dramatic")) or None
+                if os.getenv("EPIDEMIC_SOUND_API_KEY"):
+                    try:
+                        from media.epidemic_sfx_manager import get_sfx_for_scene
+                        sfx_file = get_sfx_for_scene(scene) or None
+                    except Exception:
+                        pass
+                if not sfx_file:
+                    try:
+                        from scripts.setup_sfx import get_sfx_file
+                        sfx_file = get_sfx_file(scene.get("mood", "dramatic")) or None
+                    except Exception:
+                        pass
+                # Align SFX to reveal word timestamp if available
+                if sfx_file and scene.get("is_reveal_moment") and words:
+                    scene_words = [w for w in words
+                                   if start_time <= w.get("start", 0) <= end_time]
+                    if len(scene_words) > 3:
+                        # Place SFX 2 words before scene midpoint for maximum impact
+                        mid_idx = len(scene_words) // 2
+                        sfx_word = scene_words[max(0, mid_idx - 2)]
+                        sfx_start_offset = round(sfx_word["start"] - start_time, 3)
         except Exception:
             pass
 
@@ -146,6 +174,7 @@ def run_convert(manifest, audio_data, topic="", era=""):
             "era_end":        scene.get("era_end", ""),
             "ambient_file":   ambient_file,
             "sfx_file":       sfx_file,
+            "sfx_start_offset": sfx_start_offset,
             "visual_treatment": scene.get("visual_treatment", "standard"),
             "is_breathing_room": scene.get("is_breathing_room", False),
             "narrative_function": scene.get("narrative_function", "exposition"),

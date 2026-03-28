@@ -31,6 +31,7 @@ interface Scene {
   era_start?: string; era_end?: string;
   ambient_file?: string | null;
   sfx_file?: string | null;
+  sfx_start_offset?: number;
   visual_treatment?: 'standard' | 'close_portrait' | 'wide_establishing' | 'artifact_detail' | 'map_overhead' | 'text_overlay_dark';
   is_breathing_room?: boolean;
   // Scene intent fields (resolved by Python scene_intent.py)
@@ -653,6 +654,7 @@ export const ObsidianVideo: React.FC = () => {
             {scene.sfx_file && (
               <Audio
                 src={staticFile(scene.sfx_file)}
+                startFrom={Math.round((scene.sfx_start_offset || 0) * fps)}
                 volume={(f) => {
                   const progress = f / Math.min(duration, fps * 3);
                   // Quick fade in over 0.1s, sustain, fade out over 0.5s
