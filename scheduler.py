@@ -7,7 +7,6 @@ Usage:
   python3 scheduler.py --daemon     # run forever (Railway)
   python3 scheduler.py --status     # show queue + recent videos
   python3 scheduler.py --health     # run health check now
-  python3 scheduler.py --funnel     # run shorts funnel check now
 """
 import sys
 import os
@@ -543,145 +542,6 @@ def check_reengagement_opportunities():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. SHORTS -> LONG FUNNEL TRACKING
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-def track_shorts_funnel():
-    """
-    When a short is published, track the parent long-form video's view change.
-
-    Logic:
-    1. Find shorts published in last 7 days
-    2. For each short, find its parent long-form video (via topic match or pipeline_state.parent_topic)
-    3. Compare parent's daily views before vs after short publication
-    4. Compute actual view lift (not just correlation from analytics agent)
-    5. Store results for analytics agent to use
-    """
-    print(f"\n{'='*60}\n  SHORTS FUNNEL CHECK -- {datetime.now().strftime('%Y-%m-%d %H:%M')}\n{'='*60}")
-    try:
-        from clients.supabase_client import get_client
-        from server.notify import _tg
-
-        client = get_client()
-
-        # Find shorts published in last 7 days
-        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        shorts_result = client.table("videos").select(
-            "id, topic, title, youtube_id, created_at, pipeline_state"
-        ).lt("duration_seconds", 90).gte("created_at", week_ago).execute()
-
-        shorts = shorts_result.data or []
-        if not shorts:
-            print("[Scheduler] No recent shorts to track funnel for")
-            return
-
-        # Get all long-form videos for topic matching
-        long_result = client.table("videos").select(
-            "id, topic, title, youtube_id, created_at"
-        ).gte("duration_seconds", 90).execute()
-        long_videos = long_result.data or []
-
-        # Build topic index for long-form videos
-        long_by_topic = {}
-        for lv in long_videos:
-            topic = lv.get("topic", "").strip().lower()
-            if topic:
-                long_by_topic[topic] = lv
-
-        from intel.channel_insights import load_insights as _load_insights_for_funnel
-        _funnel_insights = _load_insights_for_funnel()
-        _funnel_avg_views = _funnel_insights.get("channel_health", {}).get("avg_views_per_video", 0)
-
-        funnel_results = []
-        for short in shorts:
-            short_topic = short.get("topic", "").strip().lower()
-            short_title = short.get("title", "Unknown Short")
-
-            # Try to find parent via pipeline_state.parent_topic first
-            ps = short.get("pipeline_state") or {}
-            if isinstance(ps, str):
-                try:
-                    ps = json.loads(ps)
-                except Exception:
-                    ps = {}
-            parent_topic = (ps.get("parent_topic", "") or "").strip().lower()
-
-            parent = None
-            if parent_topic and parent_topic in long_by_topic:
-                parent = long_by_topic[parent_topic]
-            elif short_topic in long_by_topic:
-                parent = long_by_topic[short_topic]
-
-            if not parent:
-                # Fuzzy match: check if short topic is substring of any long topic
-                for lt, lv in long_by_topic.items():
-                    if short_topic and (short_topic in lt or lt in short_topic):
-                        parent = lv
-                        break
-
-            if not parent or not parent.get("id"):
-                continue
-
-            # Get parent video analytics
-            parent_anl = client.table("analytics").select("views")\
-                .eq("video_id", parent["id"]).limit(1).execute()
-            if not parent_anl.data:
-                continue
-
-            parent_views = (parent_anl.data[0].get("views", 0)) or 0
-
-            # Get short's views for context
-            short_anl = client.table("analytics").select("views")\
-                .eq("video_id", short["id"]).limit(1).execute()
-            short_views = (short_anl.data[0].get("views", 0) if short_anl.data else 0) or 0
-
-            # Compare parent views against channel average to estimate lift
-            avg_views = _funnel_avg_views
-
-            lift_pct = round(((parent_views - avg_views) / max(avg_views, 1)) * 100, 1) if avg_views > 0 else 0
-
-            funnel_results.append({
-                "short_title": short_title,
-                "short_views": short_views,
-                "parent_title": parent.get("title", "Unknown"),
-                "parent_views": parent_views,
-                "avg_channel_views": round(avg_views),
-                "estimated_lift_pct": lift_pct,
-                "short_published": short.get("created_at", ""),
-            })
-
-        # Store results
-        if funnel_results:
-            try:
-                current_insights = json.loads(INSIGHTS_FILE.read_text()) if INSIGHTS_FILE.exists() else {}
-                current_insights["shorts_funnel_tracking"] = {
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
-                    "results": funnel_results,
-                }
-                _atomic_write_json(INSIGHTS_FILE, current_insights)
-            except Exception as e:
-                print(f"[Scheduler] Could not store funnel data: {e}")
-
-            # Send Telegram notifications for each result
-            for r in funnel_results:
-                lift_emoji = "📈" if r["estimated_lift_pct"] > 0 else "📉"
-                _tg(
-                    f"{lift_emoji} *Shorts Funnel Result*\n"
-                    f"Short: _{_md_escape(r['short_title'][:50])}_ ({r['short_views']:,} views)\n"
-                    f"Parent: _{_md_escape(r['parent_title'][:50])}_ ({r['parent_views']:,} views)\n"
-                    f"Estimated lift: {r['estimated_lift_pct']:+.1f}% vs channel avg ({r['avg_channel_views']:,})"
-                )
-
-            print(f"[Scheduler] Shorts funnel: tracked {len(funnel_results)} short-to-long pairs")
-        else:
-            print("[Scheduler] No short-to-long pairs found for funnel tracking")
-
-    except Exception as e:
-        print(f"[Scheduler] Shorts funnel tracking error: {e}")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # 5. POST-UPLOAD AUTOMATION
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -695,7 +555,6 @@ def run_post_upload_sequence(video_id: str, upload_time: datetime):
     T+24h:  First-day performance check + Telegram report
     T+48h:  A/B title test (already exists)
     T+48h:  Tag optimization (already exists)
-    T+72h:  If short exists, check shorts funnel impact
     T+168h: One-week performance report + Telegram summary
     """
     try:
@@ -705,7 +564,6 @@ def run_post_upload_sequence(video_id: str, upload_time: datetime):
             "tasks": {
                 "first_hour": False,
                 "first_day": False,
-                "shorts_funnel_72h": False,
                 "one_week": False,
             }
         }
@@ -739,11 +597,6 @@ def _check_post_upload_tasks():
             if not tasks["first_day"] and elapsed >= timedelta(hours=24):
                 tasks["first_day"] = True
                 _send_first_day_report(video_id)
-
-            # T+72h: Shorts funnel check
-            if not tasks["shorts_funnel_72h"] and elapsed >= timedelta(hours=72):
-                tasks["shorts_funnel_72h"] = True
-                track_shorts_funnel()
 
             # T+168h (1 week): One-week performance report
             if not tasks["one_week"] and elapsed >= timedelta(hours=168):
@@ -1738,8 +1591,6 @@ def run_daemon():
     # ── New scheduled jobs ────────────────────────────────────────────────
     schedule.every().monday.at("11:00").do(_tracked("reengagement", check_reengagement_opportunities))
     schedule.every().day.at("07:30").do(_tracked("health_check", run_health_check))
-    schedule.every().friday.at("12:00").do(_tracked("shorts_funnel", track_shorts_funnel))
-
     # ── Print schedule ────────────────────────────────────────────────────
     print("  Scheduled: Monday at 08:00 (topic discovery)")
     print("  Scheduled: Monday at 10:00 (weekly report -> Telegram)")
@@ -1752,11 +1603,10 @@ def run_daemon():
     print("  Scheduled: Wednesday at 10:00 (community poll)")
     print("  Scheduled: Every 3 hours (trend detection)")
     print("  Scheduled: Daily at 14:00 (tag optimization)")
-    print("  Scheduled: Friday at 12:00 (shorts funnel tracking)")
     for day in PUBLISH_DAYS:
         getattr(schedule.every(), day).at(PUBLISH_TIME).do(run_one_video)
         print(f"  Scheduled: {day.capitalize()} at {PUBLISH_TIME}")
-    print("  Dynamic: Post-upload sequence (T+1h, T+24h, T+72h, T+168h)")
+    print("  Dynamic: Post-upload sequence (T+1h, T+24h, T+168h)")
 
     print("\n[Scheduler] Running... (Ctrl+C to stop)\n")
     while True:
@@ -1785,8 +1635,6 @@ if __name__ == "__main__":
         post_community_poll()
     elif "--health" in sys.argv:
         run_health_check()
-    elif "--funnel" in sys.argv:
-        track_shorts_funnel()
     elif "--reengagement" in sys.argv:
         check_reengagement_opportunities()
     elif "--daemon" in sys.argv:

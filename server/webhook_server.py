@@ -265,12 +265,6 @@ def _run_thread(topic: str, resume_from: int, topic_id: str = None):
         })
 
     try:
-        from server.notify import notify_pipeline_start
-        notify_pipeline_start(topic)
-    except Exception as e:
-        _log(f"[Server] Warning: pipeline start notification failed: {e}")
-
-    try:
         _proc = subprocess.Popen(
             cmd, cwd=str(BASE_DIR),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -362,31 +356,6 @@ def _run_thread(topic: str, resume_from: int, topic_id: str = None):
             history_file.write_text(json.dumps(history, indent=2))
         except Exception as e:
             _log(f"[Server] Failed to save run history: {e}")
-        if ok:
-            try:
-                from server.notify import notify_pipeline_complete
-                started_at = _state.get("started_at", "")
-                if started_at:
-                    from datetime import datetime as _dt
-                    _start = _dt.fromisoformat(started_at)
-                    _elapsed = (
-                        datetime.now(timezone.utc) - _start
-                    ).total_seconds() / 60.0
-                else:
-                    _elapsed = 0.0
-                notify_pipeline_complete(topic, "", "", _elapsed)
-            except Exception as e:
-                _log(f"[Server] Warning: pipeline completion notification failed: {e}")
-        else:
-            try:
-                from server.notify import notify_pipeline_failed
-                notify_pipeline_failed(
-                    topic,
-                    _state.get("stage", ""),
-                    "Pipeline returned non-zero exit",
-                )
-            except Exception as e:
-                _log(f"[Server] Warning: pipeline failure notification failed: {e}")
         # Mark topic status in Supabase so it doesn't stay in_progress forever
         if topic_id:
             try:
@@ -431,11 +400,6 @@ def _run_thread(topic: str, resume_from: int, topic_id: str = None):
             history_file.write_text(json.dumps(history, indent=2))
         except Exception as he:
             _log(f"[Server] Failed to save run history: {he}")
-        try:
-            from server.notify import notify_pipeline_failed
-            notify_pipeline_failed(topic, _state.get("stage", ""), str(e))
-        except Exception as ne:
-            _log(f"[Server] Warning: pipeline failure notification failed: {ne}")
         if topic_id:
             try:
                 from clients.supabase_client import mark_topic_status
