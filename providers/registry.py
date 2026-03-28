@@ -33,6 +33,7 @@ _BUILTIN_PROVIDERS: dict[str, dict[str, tuple[str, str]]] = {
     },
     "tts": {
         "elevenlabs": ("providers.tts.elevenlabs", "ElevenLabsProvider"),
+        "epidemic_sound": ("providers.tts.epidemic", "EpidemicTTSProvider"),
     },
     "images": {
         "fal": ("providers.images.fal", "FalProvider"),
