@@ -178,10 +178,10 @@ class TestOpenAITTSProvider:
     @patch("requests.post")
     def test_synthesize_mocked(self, mock_post):
         from providers.tts.openai_tts import OpenAIProvider
-        
+
         with patch.dict("os.environ", {"OPENAI_API_KEY": "fake-test-key"}):
             p = OpenAIProvider()
-            
+
             mock_response = mock_post.return_value
             mock_response.content = b"fake mp3 audio data"
             mock_response.raise_for_status.return_value = None
