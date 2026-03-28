@@ -79,8 +79,8 @@ class TestParamBoundsConsistency:
 
     def test_param_count(self):
         """Verify expected number of registered params."""
-        assert len(PARAM_BOUNDS) == 24
-        assert len(PARAM_DEFAULTS) == 24
+        assert len(PARAM_BOUNDS) == 30
+        assert len(PARAM_DEFAULTS) == 30
 
 
 # ── get_override ──────────────────────────────────────────────────────────────

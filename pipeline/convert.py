@@ -455,26 +455,20 @@ def run_convert(manifest, audio_data, topic="", era=""):
                 "ending": get_override("volume.ending", 1.40),
             },
         }
-        # Stem ducking config (used when music_stems are present)
+        # Stem ducking config — reads from optimizer (self-tunes from analytics)
         if music_stems:
-            try:
-                from core.config import cfg
-                sd = cfg.get("music", {})
-                sd = sd.get("stem_ducking", {}) if isinstance(sd, dict) else {}
-            except Exception:
-                sd = {}
             audio_cfg["stemDucking"] = {
                 "bass": {
-                    "speechVolume": sd.get("bass", {}).get("speech", 0.15) if isinstance(sd.get("bass"), dict) else 0.15,
-                    "silenceVolume": sd.get("bass", {}).get("silence", 0.35) if isinstance(sd.get("bass"), dict) else 0.35,
+                    "speechVolume": get_override("stem_ducking.bass.speech", 0.15),
+                    "silenceVolume": get_override("stem_ducking.bass.silence", 0.35),
                 },
                 "drums": {
-                    "speechVolume": sd.get("drums", {}).get("speech", 0.20) if isinstance(sd.get("drums"), dict) else 0.20,
-                    "silenceVolume": sd.get("drums", {}).get("silence", 0.30) if isinstance(sd.get("drums"), dict) else 0.30,
+                    "speechVolume": get_override("stem_ducking.drums.speech", 0.20),
+                    "silenceVolume": get_override("stem_ducking.drums.silence", 0.30),
                 },
                 "instruments": {
-                    "speechVolume": sd.get("instruments", {}).get("speech", 0.05) if isinstance(sd.get("instruments"), dict) else 0.05,
-                    "silenceVolume": sd.get("instruments", {}).get("silence", 0.40) if isinstance(sd.get("instruments"), dict) else 0.40,
+                    "speechVolume": get_override("stem_ducking.instruments.speech", 0.05),
+                    "silenceVolume": get_override("stem_ducking.instruments.silence", 0.40),
                 },
             }
         video_data["audio_config"] = audio_cfg

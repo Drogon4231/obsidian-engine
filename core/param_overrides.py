@@ -44,6 +44,13 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
     "volume.ending":               (1.00, 1.60),
     "short.music_speech_vol":      (0.03, 0.25),
     "short.music_silent_vol":      (0.10, 0.45),
+    # Stem ducking (per-instrument volume during narration vs silence)
+    "stem_ducking.bass.speech":        (0.05, 0.25),
+    "stem_ducking.bass.silence":       (0.25, 0.50),
+    "stem_ducking.drums.speech":       (0.08, 0.35),
+    "stem_ducking.drums.silence":      (0.15, 0.45),
+    "stem_ducking.instruments.speech": (0.01, 0.12),
+    "stem_ducking.instruments.silence": (0.25, 0.55),
 }
 
 PARAM_DEFAULTS: dict[str, float] = {
@@ -71,6 +78,12 @@ PARAM_DEFAULTS: dict[str, float] = {
     "volume.ending": 1.40,
     "short.music_speech_vol": 0.12,
     "short.music_silent_vol": 0.25,
+    "stem_ducking.bass.speech": 0.15,
+    "stem_ducking.bass.silence": 0.35,
+    "stem_ducking.drums.speech": 0.20,
+    "stem_ducking.drums.silence": 0.30,
+    "stem_ducking.instruments.speech": 0.05,
+    "stem_ducking.instruments.silence": 0.40,
 }
 
 # Minimum perceptual step sizes (below these, changes are inaudible)
@@ -92,6 +105,12 @@ PARAM_MIN_STEP: dict[str, float] = {
     "short.tail_buffer_sec": 0.1,
     "short.music_speech_vol": 0.02,
     "short.music_silent_vol": 0.02,
+    "stem_ducking.bass.speech": 0.02,
+    "stem_ducking.bass.silence": 0.03,
+    "stem_ducking.drums.speech": 0.03,
+    "stem_ducking.drums.silence": 0.03,
+    "stem_ducking.instruments.speech": 0.01,
+    "stem_ducking.instruments.silence": 0.03,
 }
 
 # Brand consistency: shorts params that should stay within threshold of LF defaults
