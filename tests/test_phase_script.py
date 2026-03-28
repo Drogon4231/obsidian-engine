@@ -185,14 +185,33 @@ class TestPostProcessScript:
     @patch("pipeline.phase_script.score_hook", return_value=None)
     @patch("pipeline.phase_script.check_pacing", return_value=[])
     @patch("pipeline.phase_script.check_script", return_value=[])
-    def test_raises_on_short_word_count(self, mock_cs, mock_cp, mock_sh, mock_cl, mock_save):
+    def test_raises_on_short_word_count_after_expansion_fails(self, mock_cs, mock_cp, mock_sh, mock_cl, mock_save):
         ctx = _make_ctx()
         ctx.script = {"full_script": "too short"}
         runner = _make_runner(ctx)
 
         from pipeline.phase_script import _post_process_script
-        with pytest.raises(Exception, match="script too short"):
+        # Mock call_agent to return a still-short expansion
+        with patch("core.agent_wrapper.call_agent", return_value={"full_script": "still too short"}):
+            with pytest.raises(Exception, match="script too short"):
+                _post_process_script(ctx, runner, MagicMock())
+
+    @patch("pipeline.phase_script.save_state")
+    @patch("pipeline.phase_script.clean_script", side_effect=lambda x: x)
+    @patch("pipeline.phase_script.score_hook", return_value=None)
+    @patch("pipeline.phase_script.check_pacing", return_value=[])
+    @patch("pipeline.phase_script.check_script", return_value=[])
+    def test_auto_expands_short_script(self, mock_cs, mock_cp, mock_sh, mock_cl, mock_save):
+        ctx = _make_ctx()
+        ctx.script = {"full_script": " ".join(["word"] * 950)}
+        runner = _make_runner(ctx)
+
+        expanded_script = " ".join(["expanded"] * 1200)
+        from pipeline.phase_script import _post_process_script
+        with patch("core.agent_wrapper.call_agent", return_value={"full_script": expanded_script}):
             _post_process_script(ctx, runner, MagicMock())
+        # Should not raise — expansion succeeded
+        assert len(ctx.script["full_script"].split()) >= 1000
 
     @patch("pipeline.phase_script.save_state")
     @patch("pipeline.phase_script.clean_script", side_effect=lambda x: x)

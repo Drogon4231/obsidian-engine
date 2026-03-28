@@ -188,10 +188,46 @@ def _post_process_script(ctx: PipelineContext, runner: StageRunner, a04) -> None
     script = ctx.script
     word_count = len(script.get("full_script", "").split())
     if word_count < 1000:
-        raise Exception(
-            f"Pipeline halted: script too short ({word_count} words, minimum 1000). "
-            "Increase target_words in blueprint or retry."
-        )
+        logger.warning(f"[Script] Too short ({word_count} words, minimum 1000) — requesting expansion")
+        needed = 1000 - word_count + 100  # Ask for extra buffer
+        try:
+            from core.agent_wrapper import call_agent
+            expanded = call_agent(
+                "04_script_writer",
+                system_prompt=(
+                    "You are a script expander. You receive a documentary script that is too short. "
+                    "Expand it by adding more detail, archival specifics, and vivid narration. "
+                    "Do NOT change the structure, hook, or ending. Keep the same voice and tone. "
+                    "Return the COMPLETE expanded script as a JSON object with a 'full_script' key."
+                ),
+                user_prompt=(
+                    f"This script is {word_count} words but needs at least 1,000 words. "
+                    f"Add approximately {needed} more words by deepening existing sections.\n\n"
+                    f"Current script:\n{script.get('full_script', '')}"
+                ),
+                max_tokens=8000,
+                stage_num=4,
+                topic=ctx.topic,
+            )
+            if isinstance(expanded, dict) and expanded.get("full_script"):
+                new_count = len(expanded["full_script"].split())
+                if new_count >= 1000:
+                    logger.info(f"[Script] Expansion successful: {word_count} → {new_count} words")
+                    ctx.script = expanded
+                    script = expanded
+                    word_count = new_count
+                else:
+                    logger.warning(f"[Script] Expansion still short: {new_count} words")
+        except Exception as expand_err:
+            logger.warning(f"[Script] Expansion failed: {expand_err}")
+
+        # Final check after retry
+        word_count = len(script.get("full_script", "").split())
+        if word_count < 1000:
+            raise Exception(
+                f"Pipeline halted: script too short ({word_count} words, minimum 1000) "
+                "even after expansion attempt."
+            )
 
     issues = check_script(script)
     _check_and_warn(issues, "Script")
