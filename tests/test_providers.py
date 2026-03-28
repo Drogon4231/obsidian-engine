@@ -163,7 +163,7 @@ class TestOpenAITTSProvider:
             p = OpenAIProvider()
             assert p.name == "OpenAI"
             assert isinstance(p, TTSProvider)
-            
+
             # Check list_voices and check_credits format
             assert len(p.list_voices()) > 5
             assert p.check_credits()["remaining"] == -1
