@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -237,6 +238,37 @@ def run_convert(manifest, audio_data, topic="", era=""):
         else:
             logger.warning("[Convert] No background music available")
 
+    # Attempt track adaptation (exact duration + stems) if API available
+    music_adapted = False
+    music_stems = None
+    _music_track_id = None
+    if music_file and os.getenv("EPIDEMIC_SOUND_API_KEY"):
+        # Extract track_id from epidemic filename (epidemic_api_mood_title_TRACKID.mp3)
+        _mf_name = music_file.rsplit("/", 1)[-1] if "/" in music_file else music_file
+        if _mf_name.startswith("epidemic_"):
+            parts = _mf_name.rsplit("_", 1)
+            if len(parts) == 2:
+                _music_track_id = parts[1].replace(".mp3", "")
+
+        if _music_track_id:
+            try:
+                from media.track_adapter import adapt_to_duration
+                adapted = adapt_to_duration(
+                    _music_track_id, total_duration,
+                    scenes=remotion_scenes,
+                    download_stems=True,
+                )
+                if adapted:
+                    music_file = adapted["adapted_file"]
+                    music_start_offset = 0
+                    music_adapted = not adapted.get("loopable", False)
+                    music_stems = adapted.get("stems")
+                    logger.info(f"[Convert] Track adapted: {music_file} "
+                                f"(stems={'yes' if music_stems else 'no'}, "
+                                f"loopable={adapted.get('loopable', False)})")
+            except Exception as _adapt_err:
+                logger.warning(f"[Convert] Track adaptation failed (using original): {_adapt_err}")
+
     # Select secondary music for Act 3 crossfade
     music_file_secondary = None
     music_secondary_start_offset = 0
@@ -294,6 +326,8 @@ def run_convert(manifest, audio_data, topic="", era=""):
         "music_start_offset": music_start_offset,
         "music_file_secondary": music_file_secondary,
         "music_secondary_start_offset": music_secondary_start_offset,
+        "music_adapted": music_adapted,
+        "music_stems": music_stems,
         "showEndscreen": True,
         "endscreen_recommended": endscreen_rec,
     }

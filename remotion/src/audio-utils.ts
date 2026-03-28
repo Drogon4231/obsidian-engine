@@ -339,3 +339,56 @@ export function secondaryMusicVolume(
   const ducked = applyDucking(time, mask, secondaryDucking);
   return Math.min(1.0, intentBase * ducked * crossMul);
 }
+
+
+/**
+ * Per-stem volume for separated music tracks (bass, drums, instruments).
+ * Each stem has its own ducking profile — drums stay rhythmic during speech,
+ * instruments duck hard, bass stays warm.
+ */
+export interface StemDuckingConfig {
+  bass?: { speechVolume?: number; silenceVolume?: number };
+  drums?: { speechVolume?: number; silenceVolume?: number };
+  instruments?: { speechVolume?: number; silenceVolume?: number };
+}
+
+const DEFAULT_STEM_DUCKING: Required<StemDuckingConfig> = {
+  bass:        { speechVolume: 0.15, silenceVolume: 0.35 },
+  drums:       { speechVolume: 0.20, silenceVolume: 0.30 },
+  instruments: { speechVolume: 0.05, silenceVolume: 0.40 },
+};
+
+export function stemVolume(
+  frame: number,
+  stem: 'bass' | 'drums' | 'instruments',
+  fps: number,
+  totalDuration: number,
+  mask: Array<{ start: number; end: number }>,
+  hasSecondary: boolean,
+  scenes: AudioScene[] = [],
+  stemDuckingConfig: StemDuckingConfig = {},
+  actMultipliersConfig: ActMultipliers = {},
+): number {
+  const time = frame / fps;
+  const progress = time / (totalDuration || 1);
+
+  const scene = scenes.length > 0 ? getSceneAtFrame(scenes, frame, fps) : null;
+  const intentBase = scene?.intent_music_volume_base ?? 0.5;
+
+  // Silence beat override
+  if (scene && (scene.intent_scene_energy ?? 0.5) < 0.15) {
+    return stem === 'drums' ? 0.03 : 0.01;
+  }
+
+  const actMul = buildVolumeEnvelope(progress, undefined, actMultipliersConfig);
+  const crossMul = hasSecondary ? crossfadeMultiplier(progress, 'primary') : 1.0;
+
+  // Stem-specific ducking
+  const stemConfig = { ...DEFAULT_STEM_DUCKING[stem], ...(stemDuckingConfig[stem] || {}) };
+  const ducked = applyDucking(time, mask, {
+    speechVolume: stemConfig.speechVolume,
+    silenceVolume: stemConfig.silenceVolume,
+  });
+
+  return Math.min(1.0, intentBase * actMul * ducked * crossMul);
+}

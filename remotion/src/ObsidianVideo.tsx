@@ -16,8 +16,8 @@ import {KeyText} from './animations/KeyText';
 import {FilmGrain} from './animations/FilmGrain';
 import {
   buildNarrationMask, distanceToSpeech,
-  primaryMusicVolume, secondaryMusicVolume, ambientVolume,
-  type WordTimestamp,
+  primaryMusicVolume, secondaryMusicVolume, ambientVolume, stemVolume,
+  type WordTimestamp, type StemDuckingConfig,
 } from './audio-utils';
 import videoData from './video-data.json';
 interface Scene {
@@ -59,6 +59,8 @@ interface VideoData {
   music_start_offset?: number;
   music_file_secondary?: string | null;
   music_secondary_start_offset?: number;
+  music_adapted?: boolean;
+  music_stems?: { bass?: string; drums?: string; instruments?: string } | null;
   showEndscreen?: boolean;
   endscreen_recommended?: EndscreenRecommended | null;
   audio_config?: AudioConfig;
@@ -545,12 +547,40 @@ export const ObsidianVideo: React.FC = () => {
   return (
     <AbsoluteFill style={{backgroundColor:'#08080e'}}>
       <Audio src={staticFile('narration.mp3')}/>
-      {data.music_file && (
+      {/* Music: stem-aware rendering if stems available, else legacy single track */}
+      {data.music_stems ? (
+        <>
+          {data.music_stems.bass && (
+            <Audio
+              src={staticFile(data.music_stems.bass)}
+              startFrom={Math.round((data.music_start_offset || 0) * fps)}
+              volume={(f) => stemVolume(f, 'bass', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              loop={!data.music_adapted}
+            />
+          )}
+          {data.music_stems.drums && (
+            <Audio
+              src={staticFile(data.music_stems.drums)}
+              startFrom={Math.round((data.music_start_offset || 0) * fps)}
+              volume={(f) => stemVolume(f, 'drums', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              loop={!data.music_adapted}
+            />
+          )}
+          {data.music_stems.instruments && (
+            <Audio
+              src={staticFile(data.music_stems.instruments)}
+              startFrom={Math.round((data.music_start_offset || 0) * fps)}
+              volume={(f) => stemVolume(f, 'instruments', fps, totalDur, narrationMask, hasSecondary, data.scenes, {}, audioConfig.actMultipliers)}
+              loop={!data.music_adapted}
+            />
+          )}
+        </>
+      ) : data.music_file && (
         <Audio
           src={staticFile(data.music_file)}
           startFrom={Math.round((data.music_start_offset || 0) * fps)}
           volume={(f) => primaryMusicVolume(f, fps, totalDur, narrationMask, hasSecondary, data.scenes, audioConfig.ducking, audioConfig.actMultipliers)}
-          loop
+          loop={!data.music_adapted}
         />
       )}
       {/* Secondary music track — crossfades in at Act 3 for emotional shift */}

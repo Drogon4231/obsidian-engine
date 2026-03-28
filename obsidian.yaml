@@ -166,6 +166,13 @@ music:
   prefer_no_vocals: true       # Filter out tracks with vocals
   target_bpm_range: [60, 120]  # Default BPM range (overridden per mood)
   max_search_results: 5        # API results to consider per search
+  enable_adaptation: true      # Use track adaptation API for exact video duration
+  enable_stems: true           # Download bass/drums/instruments stems for smart ducking
+  adaptation_timeout: 120      # Seconds to wait for adaptation API
+  stem_ducking:                # Per-stem volume during narration vs silence
+    bass:    { speech: 0.15, silence: 0.35 }
+    drums:   { speech: 0.20, silence: 0.30 }
+    instruments: { speech: 0.05, silence: 0.40 }
 
 
 # ── Quality Gates ─────────────────────────────────────────────────────────────
