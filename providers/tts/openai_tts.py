@@ -24,7 +24,7 @@ class OpenAIProvider(TTSProvider):
         voice_id: str | None = None,
         voice_settings: dict | None = None,
         speed: float = 1.0,
-       
+
     ) -> tuple[Path, list[dict]]:
         import requests
         import tempfile
@@ -33,11 +33,11 @@ class OpenAIProvider(TTSProvider):
             raise RuntimeError("OPENAI_API_KEY not set")
 
         from core.config import cfg
-        
-        model = getattr(cfg.voice, "model", "tts-1")
-        voice = voice_id or getattr(cfg.voice, "narrator_id", "alloy")  
 
-        url = f"https://api.openai.com/v1/audio/speech"
+        model = getattr(cfg.voice, "model", "tts-1")
+        voice = voice_id or getattr(cfg.voice, "narrator_id", "alloy")
+
+        url = "https://api.openai.com/v1/audio/speech"
         headers = {"Authorization": f"Bearer {self._api_key}","Content-Type": "application/json"}
         payload = {
             "input": text,
@@ -49,7 +49,7 @@ class OpenAIProvider(TTSProvider):
 
         r = requests.post(url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
-        
+
 
         # Save audio
         tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
@@ -63,14 +63,14 @@ class OpenAIProvider(TTSProvider):
     def list_voices(self) -> list[dict]:
         """Returns the default OpenAI voices"""
         voices = [
-            "alloy", "ash", "ballad", "coral", "echo", "fable", 
+            "alloy", "ash", "ballad", "coral", "echo", "fable",
             "onyx", "nova", "sage", "shimmer", "verse", "marin", "cedar"
         ]
-        
+
         return [
             {
-                "id": v, 
-                "name": v.capitalize(), 
+                "id": v,
+                "name": v.capitalize(),
                 "description": "OpenAI built-in voice"
             }
             for v in voices
@@ -82,8 +82,8 @@ class OpenAIProvider(TTSProvider):
         Billing is handled in USD across the entire organization.
         """
         return {
-            "remaining": -1, 
-            "limit": -1, 
+            "remaining": -1,
+            "limit": -1,
             "unit": "USD (Check OpenAI Dashboard)"
         }
 
