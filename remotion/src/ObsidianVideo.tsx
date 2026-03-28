@@ -17,7 +17,7 @@ import {FilmGrain} from './animations/FilmGrain';
 import {
   buildNarrationMask, distanceToSpeech,
   primaryMusicVolume, secondaryMusicVolume, ambientVolume, stemVolume,
-  type WordTimestamp, type StemDuckingConfig,
+  type WordTimestamp,
 } from './audio-utils';
 import videoData from './video-data.json';
 interface Scene {
