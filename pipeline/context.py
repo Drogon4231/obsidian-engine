@@ -45,6 +45,10 @@ class PipelineContext:
     # Series plan (set in phase_script, read in phase_prod)
     series_plan: dict | None = None
 
+    # Series metadata (set in phase_setup for Part 2+ continuations)
+    series_meta: dict | None = None
+    parent_context: dict | None = None  # Part 1's research/script/angle
+
     # Intermediate results (set by each phase, read by later phases)
     research: dict | None = None
     angle: dict | None = None

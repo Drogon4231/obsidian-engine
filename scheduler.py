@@ -1140,10 +1140,25 @@ def _run_one_video_inner():
     print(f"[Scheduler] Topic: {topic}")
     # Note: get_next_topic() already claimed the topic via claim_topic() -- no need to re-mark
 
+    # Pass series metadata to pipeline if present
+    _series_meta_path = None
+    topic_metadata = topic_row.get("metadata") or {}
+    if topic_metadata.get("series_part"):
+        try:
+            import tempfile
+            _series_meta_path = Path(tempfile.mktemp(suffix="_series_meta.json"))
+            _series_meta_path.write_text(json.dumps(topic_metadata))
+            print(f"[Scheduler] Series Part {topic_metadata['series_part']} — metadata written to {_series_meta_path}")
+        except Exception as _me:
+            print(f"[Scheduler] Could not write series metadata (non-fatal): {_me}")
+            _series_meta_path = None
+
     try:
         cmd = [sys.executable, "run_pipeline.py", topic]
         if is_experiment:
             cmd.append("--experiment")
+        if _series_meta_path:
+            cmd.extend(["--series-meta", str(_series_meta_path)])
         result = subprocess.run(cmd, cwd=str(Path(__file__).parent), timeout=7200)  # 2h max
         if result.returncode == 2:
             # Infrastructure failure (credits, API key) -- put topic back so it runs next week

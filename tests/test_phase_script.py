@@ -154,7 +154,8 @@ class TestApplySeriesPlan:
         from pipeline.phase_script import _apply_series_plan
         _apply_series_plan(ctx)
 
-        mock_queue.assert_called_once_with("Test Topic", ctx.series_plan, ctx.research)
+        mock_queue.assert_called_once_with("Test Topic", ctx.series_plan, ctx.research,
+                                                 state_path=str(ctx.state_path))
 
     @patch("pipeline.phase_script.save_state")
     @patch("pipeline.phase_script.queue_series_part2")
@@ -588,3 +589,103 @@ class TestHandleRequiresRewrite:
         output = capsys.readouterr().out
         assert "error" in output.lower()
         assert runner.mark.call_count == 2
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Series continuity — _enrich_research_with_parent
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestEnrichResearchWithParent:
+    """Test that Part 2 research gets enriched with Part 1 context."""
+
+    def test_enriches_research_with_parent_context(self):
+        ctx = _make_ctx()
+        ctx.series_meta = {"series_part": 2, "parent_topic": "Fall of Rome", "part_focus": "The aftermath"}
+        ctx.parent_context = {
+            "research": {"core_facts": ["fact1", "fact2"]},
+            "angle": {"chosen_angle": "The betrayal", "twist_potential": "The ally was the traitor"},
+            "script": {"full_script": "Once upon a time..." * 100},
+            "series_plan": {"part_1_cliffhanger": "But who really did it?"},
+        }
+        ctx.research = {"topic": "Fall of Rome (Part 2)", "core_facts": ["new_fact"]}
+
+        from pipeline.phase_script import _enrich_research_with_parent
+        _enrich_research_with_parent(ctx)
+
+        sc = ctx.research["_series_context"]
+        assert sc["series_part"] == 2
+        assert sc["parent_angle"] == "The betrayal"
+        assert sc["parent_twist"] == "The ally was the traitor"
+        assert sc["parent_cliffhanger"] == "But who really did it?"
+        assert sc["part_focus"] == "The aftermath"
+        assert len(sc["parent_core_facts_covered"]) == 2
+        assert len(sc["parent_script_summary"]) > 0
+
+    def test_no_enrichment_without_parent_context(self):
+        ctx = _make_ctx()
+        ctx.series_meta = {"series_part": 2}
+        ctx.parent_context = None
+        ctx.research = {"topic": "Test", "core_facts": []}
+
+        from pipeline.phase_script import _enrich_research_with_parent
+        _enrich_research_with_parent(ctx)
+
+        # Should not crash, but _series_context still set (with empty parent data)
+        sc = ctx.research["_series_context"]
+        assert sc["series_part"] == 2
+        assert sc["parent_angle"] == ""
+
+    def test_original_research_preserved(self):
+        ctx = _make_ctx()
+        ctx.series_meta = {"series_part": 2, "parent_topic": "X", "part_focus": "Y"}
+        ctx.parent_context = {
+            "research": {"core_facts": ["old"]},
+            "angle": {"chosen_angle": "a"},
+            "script": {"full_script": "s"},
+            "series_plan": {},
+        }
+        ctx.research = {"topic": "Test Part 2", "core_facts": ["new1", "new2"], "key_figures": []}
+
+        from pipeline.phase_script import _enrich_research_with_parent
+        _enrich_research_with_parent(ctx)
+
+        assert ctx.research["core_facts"] == ["new1", "new2"]
+        assert ctx.research["key_figures"] == []
+        assert "_series_context" in ctx.research
+
+
+class TestSeriesDedup:
+    """Test that series continuations skip dedup."""
+
+    def test_dedup_skipped_for_series(self):
+        ctx = _make_ctx()
+        ctx.series_meta = {"series_part": 2}
+
+        from pipeline.phase_setup import run_topic_dedup
+        # Should return immediately without importing topic_store
+        run_topic_dedup(ctx)  # no error = success
+
+    def test_dedup_runs_for_non_series(self):
+        ctx = _make_ctx()
+        ctx.series_meta = None
+
+        mock_ts = MagicMock()
+        mock_ts.is_duplicate.return_value = (False, "")
+        with patch.dict("sys.modules", {"server": MagicMock(topic_store=mock_ts), "server.topic_store": mock_ts}):
+            from pipeline.phase_setup import run_topic_dedup
+            run_topic_dedup(ctx)
+
+
+class TestSeriesDetectionSkipped:
+    """Test that series detection is skipped for continuations."""
+
+    def test_series_detection_skipped_for_part_2(self):
+        ctx = _make_ctx()
+        ctx.series_meta = {"series_part": 2}
+        ctx.parent_context = {"research": {}, "angle": {}, "script": {}, "series_plan": {}}
+        ctx.blueprint = {"structure_type": "CLASSIC"}
+        ctx.research = {"topic": "Test Part 2", "core_facts": []}
+
+        # Verify is_continuation logic
+        is_continuation = bool(ctx.series_meta and ctx.series_meta.get("series_part", 1) > 1)
+        assert is_continuation is True

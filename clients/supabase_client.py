@@ -116,12 +116,13 @@ CREATE INDEX IF NOT EXISTS idx_videos_created ON videos(created_at DESC);
     except Exception as e:
         print(f"✗ Connection failed: {e}")
 
-def add_topic(topic, source="manual", score=0.5):
+def add_topic(topic, source="manual", score=0.5, metadata=None):
     client = get_client()
+    row = {"topic": topic, "source": source, "score": score, "status": "queued"}
+    if metadata:
+        row["metadata"] = metadata
     try:
-        result = _with_retry(lambda: client.table("topics").insert({
-            "topic": topic, "source": source, "score": score, "status": "queued"
-        }).execute())
+        result = _with_retry(lambda: client.table("topics").insert(row).execute())
         print(f"✓ Added: {topic}")
         return result.data[0] if result.data else None
     except Exception as e:

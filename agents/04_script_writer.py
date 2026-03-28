@@ -137,6 +137,25 @@ Write the complete script now. Every word counts."""
     if part1_constraint:
         prompt += f"\n\n{part1_constraint}"
 
+    # If this is Part 2+ of a series, inject continuation context
+    series_ctx = research.get("_series_context")
+    if series_ctx and series_ctx.get("series_part", 1) > 1:
+        part_num = series_ctx["series_part"]
+        parent_script_summary = series_ctx.get("parent_script_summary", "")
+        cliffhanger = series_ctx.get("parent_cliffhanger", "")
+        prompt += (
+            f"\n\nSERIES CONTINUATION — Part {part_num}:\n"
+            f"Part {part_num - 1} ended on: \"{cliffhanger}\"\n"
+            f"This part focuses on: {series_ctx.get('part_focus', 'continuation')}\n"
+        )
+        if parent_script_summary:
+            prompt += (
+                f"\nHere is the end of Part {part_num - 1}'s script for tone/voice continuity:\n"
+                f"---\n{parent_script_summary[-800:]}\n---\n"
+                f"\nOpen by briefly recapping the cliffhanger (1-2 sentences, not a full summary), "
+                f"then immediately continue the story. Match the voice and tone of Part {part_num - 1}."
+            )
+
     guidance = get_agent_guidance("agent_04")
     if guidance:
         system += f"\n\nANALYTICS GUIDANCE:\n{guidance}"

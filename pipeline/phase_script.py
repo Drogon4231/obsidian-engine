@@ -28,6 +28,32 @@ def _check_and_warn(issues, stage_name):
             logger.warning(f"   - {issue}")
 
 
+def _enrich_research_with_parent(ctx) -> None:
+    """Inject Part 1 context into current research so later agents know what was covered."""
+    parent = ctx.parent_context or {}
+    series_meta = ctx.series_meta or {}
+    part_num = series_meta.get("series_part", 2)
+    part_focus = series_meta.get("part_focus", "")
+
+    parent_research = parent.get("research") or {}
+    parent_script = parent.get("script") or {}
+    parent_angle = parent.get("angle") or {}
+
+    ctx.research["_series_context"] = {
+        "series_part": part_num,
+        "part_focus": part_focus,
+        "parent_topic": series_meta.get("parent_topic", ""),
+        "parent_angle": parent_angle.get("chosen_angle", ""),
+        "parent_twist": parent_angle.get("twist_potential", ""),
+        "parent_script_summary": parent_script.get("full_script", "")[:1500],
+        "parent_core_facts_covered": parent_research.get("core_facts", []),
+        "parent_cliffhanger": (parent.get("series_plan") or {}).get(
+            f"part_{part_num - 1}_cliffhanger", ""),
+    }
+    logger.info(f"[Series] Enriched research with Part {part_num - 1} context "
+                f"({len(ctx.research['_series_context']['parent_core_facts_covered'])} facts from parent)")
+
+
 def run_script_phase(ctx: PipelineContext, runner: StageRunner) -> None:
     """Execute stages 1-5: Research → Originality → Narrative → Script → Verification."""
     a01 = ctx.agents["a01"]
@@ -37,8 +63,13 @@ def run_script_phase(ctx: PipelineContext, runner: StageRunner) -> None:
     a04b = ctx.agents.get("a04b")
     a05 = ctx.agents["a05"]
 
+    is_continuation = bool(ctx.series_meta and ctx.series_meta.get("series_part", 1) > 1)
+
     # ── Stage 1: Research ────────────────────────────────────────────────────
     ctx.research = runner.run_stage(1, "Research", a01.run, ctx.topic)
+    # Enrich research with parent context for series continuations
+    if is_continuation and ctx.parent_context and ctx.research:
+        _enrich_research_with_parent(ctx)
     _check_and_warn(check_research(ctx.research or {}), "Research")
 
     # ── Stage 2: Originality ─────────────────────────────────────────────────
@@ -62,9 +93,9 @@ def run_script_phase(ctx: PipelineContext, runner: StageRunner) -> None:
                 ctx.blueprint["estimated_length_minutes"] = min(optimal_len, 15)
                 logger.info(f"[Retention] Adjusted blueprint length: {current_est:.0f} \u2192 {ctx.blueprint['estimated_length_minutes']:.0f} min")
 
-    # ── Multi-part series detection ──────────────────────────────────────────
+    # ── Multi-part series detection (skip for continuations — already in a series)
     ctx.series_plan = None
-    if ctx.blueprint and ctx.research and not runner.done(4):
+    if not is_continuation and ctx.blueprint and ctx.research and not runner.done(4):
         ctx.series_plan = detect_series_potential(ctx.research, ctx.blueprint)
         if ctx.series_plan:
             _apply_series_plan(ctx)
@@ -145,7 +176,8 @@ def _apply_series_plan(ctx: PipelineContext) -> None:
             f"Do NOT reveal the twist or resolution \u2014 save that for Part 2."
         )
         logger.info("[Series] Blueprint modified for Part 1")
-        queue_series_part2(ctx.topic, series_plan, ctx.research)
+        queue_series_part2(ctx.topic, series_plan, ctx.research,
+                           state_path=str(ctx.state_path))
 
     ctx.state["series_plan"] = series_plan
     save_state(ctx.state, ctx.state_path)

@@ -26,7 +26,59 @@ if TYPE_CHECKING:
     from pipeline.context import PipelineContext
 
 
-def init_context(topic: str, resume: bool, from_stage: int, is_experiment: bool):
+def _load_parent_context(ctx, series_meta: dict) -> None:
+    """Load Part 1's research, script, and angle from its state file for series continuations."""
+    parent_state_path = series_meta.get("parent_state_path", "")
+    parent_state = None
+
+    # Try direct path first
+    if parent_state_path:
+        p = Path(parent_state_path)
+        if p.exists():
+            try:
+                with open(p) as f:
+                    parent_state = json.load(f)
+                logger.info(f"[Series] Loaded parent state from: {p.name}")
+            except Exception as e:
+                logger.warning(f"[Series] Could not load parent state file: {e}")
+
+    # Fallback: find by parent topic slug
+    if not parent_state:
+        parent_topic = series_meta.get("parent_topic", "")
+        if parent_topic:
+            import re as _re
+            parent_slug = _re.sub(r'[^a-z0-9]+', '_', parent_topic.lower())[:40]
+            existing = sorted(
+                OUTPUT_DIR.glob(f"{parent_slug}_*_state.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if existing:
+                try:
+                    with open(existing[0]) as f:
+                        parent_state = json.load(f)
+                    logger.info(f"[Series] Loaded parent state via slug match: {existing[0].name}")
+                except Exception as e:
+                    logger.warning(f"[Series] Could not load parent state by slug: {e}")
+
+    if parent_state:
+        ctx.parent_context = {
+            "research": parent_state.get("stage_1"),
+            "angle": parent_state.get("stage_2"),
+            "script": parent_state.get("stage_4"),
+            "blueprint": parent_state.get("stage_3"),
+            "series_plan": parent_state.get("series_plan"),
+        }
+        part_num = series_meta.get("series_part", 2)
+        logger.info(f"[Series] Part {part_num} has parent context: "
+                     f"research={'yes' if ctx.parent_context.get('research') else 'no'}, "
+                     f"script={'yes' if ctx.parent_context.get('script') else 'no'}")
+    else:
+        logger.warning("[Series] Could not find parent state — Part will run without prior context")
+
+
+def init_context(topic: str, resume: bool, from_stage: int, is_experiment: bool,
+                  series_meta: dict | None = None):
     """Build a PipelineContext from CLI args. Replaces lines 76-153 of run_pipeline()."""
     from pipeline.context import PipelineContext
 
@@ -43,6 +95,11 @@ def init_context(topic: str, resume: bool, from_stage: int, is_experiment: bool)
         is_experiment=is_experiment,
     )
     ctx.state_path = OUTPUT_DIR / f"{slug}_{ctx.run_id}_state.json"
+
+    # Series continuation: load Part 1 context if this is Part 2+
+    ctx.series_meta = series_meta
+    if series_meta and series_meta.get("series_part", 1) > 1:
+        _load_parent_context(ctx, series_meta)
 
     # Resume: find most recent existing state file for this topic
     if resume:
@@ -257,6 +314,9 @@ def run_credit_checks(ctx: PipelineContext) -> None:
 
 def run_topic_dedup(ctx: PipelineContext) -> None:
     """Topic deduplication check. Non-fatal. Replaces lines 317-324."""
+    if ctx.series_meta and ctx.series_meta.get("series_part", 1) > 1:
+        logger.info("[Pipeline] Skipping dedup check — series continuation")
+        return
     if not ctx.resume:
         try:
             from server import topic_store

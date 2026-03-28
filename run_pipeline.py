@@ -71,8 +71,8 @@ from pipeline.phase_post import run_post_phase
 from pipeline.runner import StageRunner
 
 
-def run_pipeline(topic, resume=False, from_stage=1, is_experiment=False):
-    ctx = init_context(topic, resume, from_stage, is_experiment)
+def run_pipeline(topic, resume=False, from_stage=1, is_experiment=False, series_meta=None):
+    ctx = init_context(topic, resume, from_stage, is_experiment, series_meta=series_meta)
     register_crash_handlers(ctx)
     notify_start(ctx)
 
@@ -117,6 +117,7 @@ Time per video: ~25-40 minutes
     resume        = "--resume" in sys.argv
     is_experiment = "--experiment" in sys.argv
     from_stage    = 1
+    series_meta   = None
     if "--from-stage" in sys.argv:
         resume = True  # --from-stage requires prior state, auto-enable resume
         idx = sys.argv.index("--from-stage")
@@ -125,9 +126,18 @@ Time per video: ~25-40 minutes
         except (IndexError, ValueError):
             print("Error: --from-stage requires a numeric value (e.g. --from-stage 5)")
             sys.exit(1)
+    if "--series-meta" in sys.argv:
+        idx = sys.argv.index("--series-meta")
+        try:
+            import json as _json
+            series_meta = _json.loads(Path(sys.argv[idx + 1]).read_text())
+            print(f"[Pipeline] Series metadata loaded: Part {series_meta.get('series_part')}")
+        except Exception as _e:
+            print(f"[Pipeline] Warning: could not load series metadata: {_e}")
 
     try:
-        result = run_pipeline(topic, resume=resume, from_stage=from_stage, is_experiment=is_experiment)
+        result = run_pipeline(topic, resume=resume, from_stage=from_stage,
+                              is_experiment=is_experiment, series_meta=series_meta)
         sys.exit(0 if result.get("pipeline_status") == "COMPLETE" else 1)
     except Exception as _e:
         _msg = str(_e).lower()

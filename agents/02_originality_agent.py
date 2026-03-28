@@ -80,6 +80,23 @@ def run(research: dict, is_experiment: bool = False) -> dict:
     guidance = get_agent_guidance("agent_02")
     effective_system = SYSTEM_PROMPT + (f"\n\nANALYTICS GUIDANCE:\n{guidance}" if guidance else "")
 
+    # Series continuation context
+    series_ctx = research.get("_series_context")
+    series_instruction = ""
+    if series_ctx and series_ctx.get("series_part", 1) > 1:
+        part_num = series_ctx["series_part"]
+        series_instruction = (
+            f"\n\nIMPORTANT — SERIES CONTINUATION (Part {part_num}):\n"
+            f"This is Part {part_num} of a multi-part series. Part {part_num - 1} already exists in our archive.\n"
+            f"Do NOT flag this as a duplicate — it is an intentional continuation.\n"
+            f"Part {part_num - 1} angle: {series_ctx.get('parent_angle', 'N/A')}\n"
+            f"Part {part_num - 1} twist: {series_ctx.get('parent_twist', 'N/A')}\n"
+            f"Part {part_num - 1} ended on: {series_ctx.get('parent_cliffhanger', 'N/A')}\n"
+            f"This part should focus on: {series_ctx.get('part_focus', 'continuation of the story')}\n"
+            f"Find an angle that CONTINUES from the cliffhanger and reveals what Part {part_num - 1} held back."
+        )
+        print(f"[Originality Agent] Series Part {part_num} — using parent context for angle finding")
+
     result = call_agent(
         "02_originality_agent",
         system_prompt=effective_system,
@@ -87,7 +104,7 @@ def run(research: dict, is_experiment: bool = False) -> dict:
 Is experiment video: {is_experiment}
 
 Research fact sheet:
-{json.dumps(research, indent=2)}
+{json.dumps({k: v for k, v in research.items() if k != "_series_context"}, indent=2)}
 
 Existing YouTube coverage found:
 {youtube_search}
@@ -103,7 +120,7 @@ Find the angle that:
 5. Can be built around one named human figure
 6. Opens on a cinematic mid-action moment
 
-{"Since this is an EXPERIMENT video: deliberately choose an angle that breaks one of our standard DNA rules. Specify which rule you're testing in experiment_rule_broken." if is_experiment else ""}""",
+{"Since this is an EXPERIMENT video: deliberately choose an angle that breaks one of our standard DNA rules. Specify which rule you're testing in experiment_rule_broken." if is_experiment else ""}{series_instruction}""",
         max_tokens=2000,
         stage_num=2,
         topic=topic,

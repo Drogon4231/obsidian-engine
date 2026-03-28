@@ -517,3 +517,62 @@ class TestNotifyStart:
             ctx = PipelineContext(topic="Topic X")
             notify_start(ctx)
         mock_notify.notify_pipeline_start.assert_called_once_with("Topic X")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# _load_parent_context
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestLoadParentContext:
+    """Test loading Part 1 state for series continuations."""
+
+    def test_loads_from_direct_path(self, tmp_path):
+        import json
+        state_file = tmp_path / "parent_state.json"
+        state_file.write_text(json.dumps({
+            "stage_1": {"core_facts": ["f1"]},
+            "stage_2": {"chosen_angle": "angle1"},
+            "stage_3": {"structure_type": "CLASSIC"},
+            "stage_4": {"full_script": "the script"},
+            "series_plan": {"part_1_cliffhanger": "cliffhanger"},
+        }))
+
+        ctx = PipelineContext(topic="Test Part 2")
+        meta = {"series_part": 2, "parent_state_path": str(state_file), "parent_topic": "Test"}
+
+        from pipeline.phase_setup import _load_parent_context
+        _load_parent_context(ctx, meta)
+
+        assert ctx.parent_context is not None
+        assert ctx.parent_context["research"]["core_facts"] == ["f1"]
+        assert ctx.parent_context["angle"]["chosen_angle"] == "angle1"
+        assert ctx.parent_context["script"]["full_script"] == "the script"
+
+    def test_fallback_to_slug_match(self, tmp_path):
+        import json
+        state_file = tmp_path / "test_topic_abc123_state.json"
+        state_file.write_text(json.dumps({
+            "stage_1": {"core_facts": ["found_via_slug"]},
+            "stage_2": {},
+            "stage_3": {},
+            "stage_4": {},
+        }))
+
+        ctx = PipelineContext(topic="Test Topic Part 2")
+        meta = {"series_part": 2, "parent_state_path": "/nonexistent/path.json", "parent_topic": "test topic"}
+
+        from pipeline.phase_setup import _load_parent_context
+        with patch("pipeline.phase_setup.OUTPUT_DIR", tmp_path):
+            _load_parent_context(ctx, meta)
+
+        assert ctx.parent_context is not None
+        assert ctx.parent_context["research"]["core_facts"] == ["found_via_slug"]
+
+    def test_no_parent_found(self):
+        ctx = PipelineContext(topic="Test Part 2")
+        meta = {"series_part": 2, "parent_state_path": "", "parent_topic": ""}
+
+        from pipeline.phase_setup import _load_parent_context
+        _load_parent_context(ctx, meta)
+
+        assert ctx.parent_context is None

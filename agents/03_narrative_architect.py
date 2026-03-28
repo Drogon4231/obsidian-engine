@@ -150,6 +150,20 @@ def run(research: dict, angle: dict) -> dict:
     except Exception:
         pass
 
+    # Series continuation instruction
+    series_ctx = research.get("_series_context")
+    series_instruction = ""
+    if series_ctx and series_ctx.get("series_part", 1) > 1:
+        part_num = series_ctx["series_part"]
+        series_instruction = (
+            f"\n\nSERIES CONTINUATION — Part {part_num}:\n"
+            f"Part {part_num - 1} ended on this cliffhanger: {series_ctx.get('parent_cliffhanger', 'N/A')}\n"
+            f"This part should focus on: {series_ctx.get('part_focus', 'continuation')}\n"
+            f"Open by recapping the cliffhanger moment in 1-2 sentences, then immediately escalate.\n"
+            f"The hook should reference the unresolved tension from Part {part_num - 1}.\n"
+        )
+        print(f"[Narrative Architect] Series Part {part_num} — structuring continuation")
+
     result = call_agent(
         "03_narrative_architect",
         system_prompt=effective_system,
@@ -160,10 +174,10 @@ Hook moment: {angle.get('hook_moment')}
 Twist potential: {angle.get('twist_potential')}
 
 Full research:
-{json.dumps(research, indent=2)}
+{json.dumps({k: v for k, v in research.items() if k != "_series_context"}, indent=2)}
 
 Full angle brief:
-{json.dumps(angle, indent=2)}
+{json.dumps(angle, indent=2)}{series_instruction}
 
 Design the complete story blueprint. Remember:
 - FIRST choose the best narrative structure (CLASSIC, MYSTERY, DUAL_TIMELINE, COUNTDOWN, TRIAL, or REFRAME) for THIS topic

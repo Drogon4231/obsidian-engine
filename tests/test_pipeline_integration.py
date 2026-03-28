@@ -123,7 +123,7 @@ def _make_init_context(tmp_path, state_override=None):
     output_dir = tmp_path / "outputs"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    def _init_context(topic, resume, from_stage, is_experiment):
+    def _init_context(topic, resume, from_stage, is_experiment, series_meta=None):
         from pipeline.context import PipelineContext
         import re
 

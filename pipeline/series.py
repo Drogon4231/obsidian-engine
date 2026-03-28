@@ -191,8 +191,9 @@ def detect_series_potential(research: dict, blueprint: dict) -> dict | None:
         return None
 
 
-def queue_series_parts(topic: str, series_plan: dict, research: dict):
-    """Queue remaining parts of a series in Supabase for later production."""
+def queue_series_parts(topic: str, series_plan: dict, research: dict,
+                       state_path: str = ""):
+    """Queue remaining parts of a series in Supabase with full context metadata."""
     queued = []
     try:
         from clients import supabase_client
@@ -203,8 +204,18 @@ def queue_series_parts(topic: str, series_plan: dict, research: dict):
             part_topic = f"{topic} {suffix}"
             # Score decreases slightly for later parts to preserve queue priority
             score = round(0.92 - (part_num - 2) * 0.02, 2)
-            supabase_client.add_topic(part_topic, source="series_auto", score=score)
-            logger.info(f"[Series] Queued Part {part_num}: {part_topic}")
+            metadata = {
+                "series_part": part_num,
+                "series_num_parts": num_parts,
+                "parent_topic": topic,
+                "series_plan": series_plan,
+                "parent_state_path": state_path,
+                "part_focus": series_plan.get(f"part_{part_num}_focus", ""),
+            }
+            supabase_client.add_topic(
+                part_topic, source="series_auto", score=score, metadata=metadata,
+            )
+            logger.info(f"[Series] Queued Part {part_num}: {part_topic} (with context metadata)")
             queued.append(part_topic)
     except Exception as e:
         logger.warning(f"[Series] Failed to queue series parts (non-critical): {e}")
@@ -212,9 +223,10 @@ def queue_series_parts(topic: str, series_plan: dict, research: dict):
 
 
 # Backward compat alias
-def queue_series_part2(topic: str, series_plan: dict, research: dict):
+def queue_series_part2(topic: str, series_plan: dict, research: dict,
+                       state_path: str = ""):
     """Queue Part 2 of a series in Supabase for later production."""
-    result = queue_series_parts(topic, series_plan, research)
+    result = queue_series_parts(topic, series_plan, research, state_path=state_path)
     return result[0] if result else None
 
 
