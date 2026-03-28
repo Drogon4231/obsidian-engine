@@ -895,11 +895,33 @@ def music_status():
                 usage = json.loads(usage_file.read_text())
             except Exception:
                 pass
+        # Epidemic Sound API status
+        api_status = "no_key"
+        subscription_plan = None
+        if os.getenv("EPIDEMIC_SOUND_API_KEY"):
+            try:
+                from clients.epidemic_client import EpidemicSoundClient
+                es_client = EpidemicSoundClient()
+                if es_client.check_key_valid():
+                    api_status = "connected"
+                    try:
+                        sub = es_client.check_subscription()
+                        subscription_plan = sub.get("plan")
+                    except Exception:
+                        pass
+                else:
+                    api_status = "expired"
+            except Exception:
+                api_status = "error"
+
         return jsonify({
             "tracks_by_mood": tracks,
             "total_tracks": sum(len(v) for v in tracks.values()),
             "moods": list(tracks.keys()),
             "usage": usage,
+            "api_status": api_status,
+            "key_valid": api_status == "connected",
+            "subscription_plan": subscription_plan,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1701,6 +1723,8 @@ _SETUP_API_KEYS = [
      "help": "https://t.me/BotFather", "category": "notifications"},
     {"key": "TELEGRAM_CHAT_ID", "label": "Telegram Chat ID", "required": False,
      "help": "https://t.me/userinfobot", "category": "notifications"},
+    {"key": "EPIDEMIC_SOUND_API_KEY", "label": "Epidemic Sound", "required": False,
+     "help": "https://www.epidemicsound.com/account/api-keys", "category": "music"},
 ]
 
 
@@ -1846,6 +1870,16 @@ def api_setup_validate():
                 result["valid"] = len(key_value) > 20
         elif key_name in ("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
             result["valid"] = len(key_value) > 5
+        elif key_name == "EPIDEMIC_SOUND_API_KEY":
+            try:
+                from clients.epidemic_client import EpidemicSoundClient
+                es = EpidemicSoundClient(api_key=key_value)
+                result["valid"] = es.check_key_valid()
+                if not result["valid"]:
+                    result["error"] = "Key expired or invalid — regenerate at epidemicsound.com/account/api-keys"
+            except Exception as _ev:
+                result["valid"] = False
+                result["error"] = f"Validation failed: {_ev}"
         else:
             result["error"] = f"Unknown key: {key_name}"
 

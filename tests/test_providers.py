@@ -8,6 +8,8 @@ from providers.base import (
     FootageProvider,
     ImageProvider,
     LLMProvider,
+    MusicProvider,
+    SFXProvider,
     TTSProvider,
     UploadProvider,
 )
@@ -38,6 +40,14 @@ class TestProviderBaseClasses:
     def test_upload_provider_is_abstract(self):
         with pytest.raises(TypeError):
             UploadProvider()
+
+    def test_music_provider_is_abstract(self):
+        with pytest.raises(TypeError):
+            MusicProvider()
+
+    def test_sfx_provider_is_abstract(self):
+        with pytest.raises(TypeError):
+            SFXProvider()
 
 
 # ── Concrete provider tests ───────────────────────────────────────────────────
@@ -144,6 +154,62 @@ class TestFalProvider:
             assert isinstance(p, ImageProvider)
 
 
+class TestEpidemicMusicProvider:
+    """Test Epidemic Sound music provider instantiation."""
+
+    def test_instantiation(self):
+        from providers.music.epidemic import EpidemicMusicProvider
+        with patch.dict("os.environ", {"EPIDEMIC_SOUND_API_KEY": "fake-test-key"}):
+            p = EpidemicMusicProvider()
+            assert p.name == "Epidemic Sound"
+            assert isinstance(p, MusicProvider)
+
+    def test_check_status_no_key(self):
+        from providers.music.epidemic import EpidemicMusicProvider
+        with patch.dict("os.environ", {}, clear=True):
+            p = EpidemicMusicProvider()
+            status = p.check_status()
+            assert status["status"] == "no_key"
+
+
+class TestLocalMusicProvider:
+    """Test local music library provider."""
+
+    def test_instantiation(self):
+        from providers.music.local import LocalMusicProvider
+        p = LocalMusicProvider()
+        assert p.name == "Local Library"
+        assert isinstance(p, MusicProvider)
+
+
+class TestEpidemicSFXProvider:
+    """Test Epidemic Sound SFX provider instantiation."""
+
+    def test_instantiation(self):
+        from providers.sfx.epidemic import EpidemicSFXProvider
+        with patch.dict("os.environ", {"EPIDEMIC_SOUND_API_KEY": "fake-test-key"}):
+            p = EpidemicSFXProvider()
+            assert p.name == "Epidemic Sound SFX"
+            assert isinstance(p, SFXProvider)
+
+    def test_check_status_no_key(self):
+        from providers.sfx.epidemic import EpidemicSFXProvider
+        with patch.dict("os.environ", {}, clear=True):
+            p = EpidemicSFXProvider()
+            status = p.check_status()
+            assert status["status"] == "no_key"
+
+
+class TestLocalSFXProvider:
+    """Test local SFX provider."""
+
+    def test_instantiation(self):
+        from providers.sfx.local import LocalSFXProvider
+        p = LocalSFXProvider()
+        assert p.name == "Local SFX"
+        assert isinstance(p, SFXProvider)
+
+
 # ── Registry tests ────────────────────────────────────────────────────────────
 
 class TestProviderRegistry:
@@ -159,8 +225,12 @@ class TestProviderRegistry:
         assert "images" in result
         assert "footage" in result
         assert "upload" in result
+        assert "music" in result
+        assert "sfx" in result
         assert "anthropic" in result["llm"]
         assert "openai" in result["llm"]
+        assert "epidemic_sound" in result["music"]
+        assert "local" in result["music"]
 
     def test_list_single_type(self):
         result = registry.list_providers("tts")

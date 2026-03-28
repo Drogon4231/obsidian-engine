@@ -180,6 +180,67 @@ class FootageProvider(ABC):
         """Provider display name."""
 
 
+class MusicProvider(ABC):
+    """Abstract base for music providers (Epidemic Sound, local library)."""
+
+    @abstractmethod
+    def search(self, mood: str, duration: float = 600, **kwargs) -> list[dict]:
+        """Search for music tracks matching criteria.
+
+        Returns list of {"id": str, "title": str, "artist": str,
+                         "duration": float, "bpm": int, "mood": str}
+        """
+
+    @abstractmethod
+    def download(self, track_id: str, output_path: Path,
+                 stem: str | None = None) -> Path:
+        """Download a track. stem: None (full), 'BASS', 'DRUMS', 'INSTRUMENTS'."""
+
+    @abstractmethod
+    def select_for_video(self, scenes: list[dict],
+                         total_duration: float) -> dict | None:
+        """Select best track for a video.
+
+        Returns {"music_file": str, "music_start_offset": float,
+                 "track_id": str, "title": str, "bpm": int, "mood": str}
+        or None.
+        """
+
+    def check_status(self) -> dict:
+        """Check provider status (API connectivity, subscription)."""
+        return {"status": "available"}
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider display name."""
+
+
+class SFXProvider(ABC):
+    """Abstract base for sound effects providers (Epidemic Sound, local files)."""
+
+    @abstractmethod
+    def search(self, keyword: str, duration_max: float = 5.0,
+               **kwargs) -> list[dict]:
+        """Search for sound effects.
+
+        Returns list of {"id": str, "title": str, "duration": float, "tags": list}
+        """
+
+    @abstractmethod
+    def download(self, sfx_id: str, output_path: Path) -> Path:
+        """Download a sound effect file."""
+
+    def check_status(self) -> dict:
+        """Check provider status."""
+        return {"status": "available"}
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider display name."""
+
+
 class UploadProvider(ABC):
     """Abstract base for video upload providers (YouTube, local save)."""
 

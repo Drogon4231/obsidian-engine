@@ -166,10 +166,24 @@ def get_music_for_mood(mood: str, target_duration: float = 600) -> str | None:
     Get a background music file for a given mood.
     Returns the filename relative to remotion/public/ (e.g., "music/dark_01_scp_x1x.mp3")
     or None if no tracks available for that mood.
+
+    Priority: Epidemic Sound API → local premium → local free → fallback mood.
     """
     mood = mood.lower() if mood else DEFAULT_MOOD
     if mood not in MOODS:
         mood = DEFAULT_MOOD
+
+    # Try Epidemic Sound API first (if key configured)
+    if os.getenv("EPIDEMIC_SOUND_API_KEY"):
+        try:
+            from media.epidemic_music_manager import search_and_download_for_mood
+            result = search_and_download_for_mood(mood, target_duration)
+            if result:
+                _record_usage(result["filename"], mood)
+                print(f"[Music] Selected (EPIDEMIC API): {result['filename']} for mood '{mood}'")
+                return f"music/{result['filename']}"
+        except Exception as e:
+            print(f"[Music] Epidemic Sound API unavailable: {e}")
 
     library = scan_library()
     tracks = library.get(mood, [])

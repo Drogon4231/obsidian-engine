@@ -21,12 +21,13 @@ const selectedProviders = signal<Record<string, string>>({})
 
 const STEPS = ['Welcome', 'API Keys', 'Profile', 'Providers', 'Review']
 
-const CATEGORY_ORDER = ['llm', 'tts', 'images', 'footage', 'database', 'notifications']
+const CATEGORY_ORDER = ['llm', 'tts', 'images', 'footage', 'music', 'database', 'notifications']
 const CATEGORY_LABELS: Record<string, string> = {
   llm: 'AI Text Generation',
   tts: 'Text-to-Speech',
   images: 'Image Generation',
   footage: 'Stock Footage',
+  music: 'Background Music',
   database: 'Database',
   notifications: 'Notifications',
 }
@@ -38,6 +39,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   fal: 'fal.ai (Recraft / Flux)',
   pexels: 'Pexels (Free)',
   local: 'Save to Disk',
+  epidemic_sound: 'Epidemic Sound',
+  local_music: 'Local Library (Kevin MacLeod)',
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

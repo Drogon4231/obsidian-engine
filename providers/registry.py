@@ -19,6 +19,8 @@ from providers.base import (
     FootageProvider,
     ImageProvider,
     LLMProvider,
+    MusicProvider,
+    SFXProvider,
     TTSProvider,
     UploadProvider,
 )
@@ -41,6 +43,14 @@ _BUILTIN_PROVIDERS: dict[str, dict[str, tuple[str, str]]] = {
     "upload": {
         "local": ("providers.upload.local", "LocalSaveProvider"),
     },
+    "music": {
+        "epidemic_sound": ("providers.music.epidemic", "EpidemicMusicProvider"),
+        "local": ("providers.music.local", "LocalMusicProvider"),
+    },
+    "sfx": {
+        "epidemic_sound": ("providers.sfx.epidemic", "EpidemicSFXProvider"),
+        "local": ("providers.sfx.local", "LocalSFXProvider"),
+    },
 }
 
 # Expected base class for each provider type
@@ -50,6 +60,8 @@ _BASE_CLASSES: dict[str, type] = {
     "images": ImageProvider,
     "footage": FootageProvider,
     "upload": UploadProvider,
+    "music": MusicProvider,
+    "sfx": SFXProvider,
 }
 
 # Default provider for each type (used when config doesn't specify)
@@ -59,6 +71,8 @@ _DEFAULTS: dict[str, str] = {
     "images": "fal",
     "footage": "pexels",
     "upload": "local",
+    "music": "local",
+    "sfx": "local",
 }
 
 # Singleton cache

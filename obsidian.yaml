@@ -25,6 +25,8 @@ profile: documentary
 #   images:  fal
 #   footage: pexels
 #   upload:  local
+#   music:   epidemic_sound, local
+#   sfx:     epidemic_sound, local
 # Or use a custom class: "my_package.module.ClassName"
 providers:
   llm:
@@ -39,6 +41,10 @@ providers:
     name: local
     options:
       # output_dir: "./outputs/final"   # Uncomment to set custom output path
+  music:
+    name: auto                           # "epidemic_sound", "local", or "auto"
+  sfx:
+    name: auto
 
 
 # ── Voice & Narration ─────────────────────────────────────────────────────────
@@ -151,6 +157,15 @@ audio:
   tail_buffer_sec: 1.5       # Silence after audio ends
   min_duration: 300          # 5 minutes minimum
   max_duration: 1200         # 20 minutes maximum
+
+
+# ── Music ─────────────────────────────────────────────────────────────────────
+music:
+  provider: auto               # "epidemic_sound", "local", or "auto" (try API, fall back)
+  cache_downloads: true        # Cache API downloads to remotion/public/music/
+  prefer_no_vocals: true       # Filter out tracks with vocals
+  target_bpm_range: [60, 120]  # Default BPM range (overridden per mood)
+  max_search_results: 5        # API results to consider per search
 
 
 # ── Quality Gates ─────────────────────────────────────────────────────────────
