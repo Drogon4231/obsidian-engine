@@ -18,6 +18,88 @@ from core.shutdown import _shutdown_event
 logger = get_logger(__name__)
 
 
+# ── Era-Specific Visual Constraints ──────────────────────────────────────────
+# Prevents anachronistic imagery (e.g., Mughal domes for Mauryan pillared halls).
+# Each era has positive anchors (what TO show) and negative prompts (what to EXCLUDE).
+
+ERA_CONSTRAINTS = {
+    "mauryan": {
+        "keywords": ["maurya", "chandragupta", "chanakya", "kautilya", "ashoka", "magadha", "pataliputra", "arthashastra", "nanda"],
+        "years": (-400, -180),
+        "positive": "Mauryan pillared hall, Ashokan lion capital, bare-shouldered Brahmanic dress, sandstone architecture, simple stone columns, open courtyards",
+        "negative": "no domes, no minarets, no Mughal architecture, no Islamic arches, no ornate patterns, no turbans, no medieval armor",
+    },
+    "roman": {
+        "keywords": ["roman", "caesar", "augustus", "nero", "senate", "legion", "gladiator", "colosseum"],
+        "years": (-500, 476),
+        "positive": "Roman toga, marble columns, laurel wreath, Roman forum, triumphal arch, legionary armor, terracotta rooftops",
+        "negative": "no medieval castles, no Gothic architecture, no plate armor, no Renaissance clothing",
+    },
+    "medieval_european": {
+        "keywords": ["medieval", "crusade", "knight", "castle", "feudal", "monastery", "plague", "viking"],
+        "years": (476, 1453),
+        "positive": "Gothic stone cathedral, chainmail armor, timber frame buildings, wattle and daub, thatched roofs, stone keep",
+        "negative": "no Roman toga, no Renaissance architecture, no modern buildings, no ancient ruins",
+    },
+    "ancient_egyptian": {
+        "keywords": ["pharaoh", "egypt", "pyramid", "nile", "hieroglyph", "cleopatra", "tutankhamun", "ramses"],
+        "years": (-3000, -30),
+        "positive": "Egyptian linen garments, papyrus columns, sandstone temple, hieroglyphic walls, desert landscape, reed boats",
+        "negative": "no Greek columns, no Roman architecture, no medieval elements, no Islamic arches",
+    },
+    "mughal": {
+        "keywords": ["mughal", "akbar", "shah jahan", "taj mahal", "delhi sultanate"],
+        "years": (1526, 1857),
+        "positive": "Mughal miniature painting style, ornate domes, jali screens, marble inlay, jeweled turbans, Indo-Islamic architecture",
+        "negative": "no ancient ruins, no bare stone pillars, no Brahmanic dress, no Roman elements",
+    },
+    "ancient_greek": {
+        "keywords": ["greek", "athens", "sparta", "alexander", "philosopher", "olympics", "pericles", "socrates", "plato"],
+        "years": (-800, -146),
+        "positive": "Greek chiton and himation, Doric/Ionic columns, agora marketplace, olive groves, white marble temple, amphitheater",
+        "negative": "no Roman elements, no medieval castles, no Renaissance art, no modern buildings",
+    },
+    "colonial": {
+        "keywords": ["colonial", "empire", "slavery", "plantation", "east india company", "conquest"],
+        "years": (1500, 1900),
+        "positive": "colonial-era clothing, wooden sailing ships, plantation architecture, muskets, tricorn hats, quill and inkwell",
+        "negative": "no ancient architecture, no medieval elements, no modern technology",
+    },
+}
+
+
+def _detect_era(scenes: list, topic: str = "") -> dict | None:
+    """Detect the historical era from scene data and topic name.
+    Returns the matching ERA_CONSTRAINTS entry or None.
+    """
+    text = topic.lower()
+    for scene in scenes[:5]:
+        text += " " + (scene.get("narration", "") or "").lower()
+        text += " " + (scene.get("year", "") or "").lower()
+        text += " " + (scene.get("location", "") or "").lower()
+
+    for era_name, constraints in ERA_CONSTRAINTS.items():
+        if any(kw in text for kw in constraints["keywords"]):
+            return constraints
+
+    # Try year-based detection
+    for scene in scenes:
+        year_str = scene.get("year", "")
+        if year_str:
+            try:
+                year_num = int("".join(c for c in year_str if c.isdigit() or c == "-"))
+                if "bce" in year_str.lower() or "bc" in year_str.lower():
+                    year_num = -abs(year_num)
+                for era_name, constraints in ERA_CONSTRAINTS.items():
+                    y_start, y_end = constraints["years"]
+                    if y_start <= year_num <= y_end:
+                        return constraints
+            except (ValueError, TypeError):
+                continue
+
+    return None
+
+
 def _apply_color_harmonization(scenes: list, palette: list[str]):
     """Apply subtle color grade to all generated images using the visual bible palette.
 
@@ -122,7 +204,8 @@ def _score_image(image_path) -> int:
 
 def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                            mood_light, style_recraft, style_flux,
-                           character_portraits=None, visual_bible=None):
+                           character_portraits=None, visual_bible=None,
+                           era_constraints=None):
     """Generate + quality-score one scene image. Thread-safe: unique file path per scene.
 
     Returns (idx, updated_scene, success).
@@ -216,9 +299,16 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
         if motifs and mood in ("tense", "dark", "dramatic", "cold"):
             motif_hint = f"subtle recurring motif: {motifs[0]}, "
 
+        # Era-specific visual anchors and negative prompts
+        era_positive = ""
+        era_negative = ""
+        if era_constraints:
+            era_positive = f"{era_constraints['positive']}, "
+            era_negative = f", {era_constraints['negative']}"
+
         prompt = (f"{subject}, {era_context}{char_desc}{composition_hint}"
-                  f"{palette_hint}{motif_hint}"
-                  f"{mood_light.get(mood, 'deep shadows')}, {cur_style}")
+                  f"{era_positive}{palette_hint}{motif_hint}"
+                  f"{mood_light.get(mood, 'deep shadows')}, {cur_style}{era_negative}")
 
         logger.info(f"  [{_thread}] Scene {idx+1}/{total_scenes} ({mood})...")
 
@@ -244,8 +334,8 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                                     ref_b64 = base64.b64encode(_pf.read()).decode()
                                 kontext_prompt = (
                                     f"Transform this into: {subject}, {era_context}{composition_hint}"
-                                    f"{palette_hint}{mood_light.get(mood, 'deep shadows')}. "
-                                    f"Keep the character's face, build, and clothing identical. {cur_style}"
+                                    f"{era_positive}{palette_hint}{mood_light.get(mood, 'deep shadows')}. "
+                                    f"Keep the character's face, build, and clothing identical. {cur_style}{era_negative}"
                                 )
                                 result = _fal_subscribe_with_retry("fal-ai/flux-pro/kontext", {
                                     "image": f"data:image/jpeg;base64,{ref_b64}",
@@ -410,6 +500,11 @@ def run_images(manifest):
     os.environ["FAL_KEY"] = FAL_KEY
     scenes = manifest.get("scenes", [])
 
+    # Detect historical era for visual constraints
+    era_constraints = _detect_era(scenes, manifest.get("topic", ""))
+    if era_constraints:
+        logger.info(f"[Images] Era detected — applying visual constraints: {era_constraints['positive'][:60]}...")
+
     # Generate character reference portraits if visual bible is available
     visual_bible = manifest.get("visual_bible", {})
     character_portraits = _generate_character_portraits(visual_bible, scenes, ASSETS_DIR) if visual_bible else {}
@@ -463,7 +558,7 @@ def run_images(manifest):
                 fut = pool.submit(
                     _generate_single_image, idx, scene, len(scenes),
                     ASSETS_DIR, IMAGE_MODEL, MOOD_LIGHT, STYLE_RECRAFT, STYLE_FLUX,
-                    character_portraits, visual_bible,
+                    character_portraits, visual_bible, era_constraints,
                 )
                 futures[fut] = idx
 

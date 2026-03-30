@@ -155,12 +155,66 @@ SCRIPT:
         f"| {len(changes_made)} change type(s) applied"
     )
 
+    # Apply pronunciation guide for historical terms
+    reformatted, pron_count = _apply_pronunciation_guide(reformatted)
+    if pron_count > 0:
+        changes_made.append(f"Pronunciation guide: {pron_count} term(s) respelled for TTS accuracy")
+
     return {
         "full_script": reformatted,
         "original_word_count": original_word_count,
         "formatted_word_count": formatted_word_count,
         "changes_made": changes_made,
     }
+
+
+# ── Pronunciation Guide ─────────────────────────────────────────────────────
+# Respells historical terms for accurate TTS pronunciation.
+# ElevenLabs doesn't support SSML phonemes, but responds to phonetic respelling.
+# Only applies on first occurrence (so the viewer reads the correct spelling
+# in captions, but hears correct pronunciation).
+
+import re as _re
+
+PRONUNCIATION_MAP = {
+    # Sanskrit / Indian
+    "Arthashastra":   "Artha-shaas-tra",
+    "Chanakya":       "Chaa-nuh-kya",
+    "Chandragupta":   "Chun-druh-gup-ta",
+    "Kautilya":       "Kow-til-ya",
+    "Ashoka":         "Uh-sho-ka",
+    "Pataliputra":    "Paa-ta-lee-poo-tra",
+    "Maurya":         "Mowr-ya",
+    "Magadha":        "Muh-guh-dha",
+    "Bindusara":      "Bin-doo-saa-ra",
+    "Dhamma":         "Dhum-ma",
+    "Vishnugupta":    "Vish-noo-gup-ta",
+    # Greek / Roman
+    "Megasthenes":    "Meh-gas-theh-neez",
+    "Seleucus":       "Seh-loo-kus",
+    # Egyptian
+    "Tutankhamun":    "Too-tan-kah-moon",
+    "Akhenaten":      "Ah-keh-nah-ten",
+    "Nefertiti":      "Nef-er-tee-tee",
+    # General historical
+    "Machiavelli":    "Mah-kee-uh-vel-ee",
+    "Thucydides":     "Thoo-sid-ih-deez",
+}
+
+
+def _apply_pronunciation_guide(text: str) -> tuple[str, int]:
+    """Replace first occurrence of historical terms with phonetic respelling.
+
+    Returns (modified_text, count_of_replacements).
+    """
+    count = 0
+    for term, respelling in PRONUNCIATION_MAP.items():
+        # Only replace first occurrence, case-insensitive
+        pattern = _re.compile(_re.escape(term), _re.IGNORECASE)
+        if pattern.search(text):
+            text = pattern.sub(respelling, text, count=1)
+            count += 1
+    return text, count
 
 
 def _detect_changes(original: str, reformatted: str) -> list:
