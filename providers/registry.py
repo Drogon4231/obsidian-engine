@@ -140,8 +140,21 @@ def get_provider(provider_type: str, *, fresh: bool = False) -> Any:
 
     name, options = _resolve_provider_config(provider_type)
 
-    # Check built-in providers first
+    # Resolve "auto" for music/sfx: try epidemic_sound if API key set, else local
     builtins = _BUILTIN_PROVIDERS.get(provider_type, {})
+    if name == "auto" and provider_type in ("music", "sfx"):
+        import os
+        if os.getenv("EPIDEMIC_SOUND_API_KEY") and "epidemic_sound" in builtins:
+            try:
+                module_path, class_name = builtins["epidemic_sound"]
+                cls = _load_class(module_path, class_name)
+                name = "epidemic_sound"
+            except Exception:
+                name = "local"
+        else:
+            name = "local"
+
+    # Check built-in providers first
     if name in builtins:
         module_path, class_name = builtins[name]
         cls = _load_class(module_path, class_name)
