@@ -62,12 +62,32 @@ _MOOD_ENERGY = {
 # ── Narrative Function → Modifiers ────────────────────────────────────────────
 # Each function adjusts the base energy and sets rendering hints
 _FUNCTION_MODIFIERS = {
+    "cold_open": {
+        "energy_offset":    +0.10,
+        "pace_modifier":    0.95,     # measured, establishing dread
+        "transition_type":  "normal",
+        "caption_style":    "whisper",
+        "motion_hint":      "slow_pan",
+        "speech_intensity":  0.6,     # restrained, ominous
+        "silence_eligible":  False,
+    },
     "hook": {
         "energy_offset":    +0.15,
         "pace_modifier":    1.05,     # slightly faster, punchy
         "transition_type":  "normal",
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
+        "speech_intensity":  0.8,     # urgent, commanding
+        "silence_eligible":  False,
+    },
+    "setup": {
+        "energy_offset":    -0.05,
+        "pace_modifier":    0.95,     # steady, building world
+        "transition_type":  "normal",
+        "caption_style":    "standard",
+        "motion_hint":      "slow_pan",
+        "speech_intensity":  0.5,     # calm, authoritative
+        "silence_eligible":  False,
     },
     "exposition": {
         "energy_offset":    -0.10,
@@ -75,6 +95,26 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "normal",
         "caption_style":    "standard",
         "motion_hint":      "slow_pan",
+        "speech_intensity":  0.5,
+        "silence_eligible":  False,
+    },
+    "rising_action": {
+        "energy_offset":    +0.10,
+        "pace_modifier":    1.02,     # building momentum
+        "transition_type":  "normal",
+        "caption_style":    "standard",
+        "motion_hint":      "zoom_in",
+        "speech_intensity":  0.65,
+        "silence_eligible":  False,
+    },
+    "complication": {
+        "energy_offset":    +0.12,
+        "pace_modifier":    1.00,     # controlled tension
+        "transition_type":  "normal",
+        "caption_style":    "standard",
+        "motion_hint":      "slow_pan",
+        "speech_intensity":  0.7,
+        "silence_eligible":  False,
     },
     "question": {
         "energy_offset":    +0.05,
@@ -82,6 +122,8 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "normal",
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
+        "speech_intensity":  0.6,
+        "silence_eligible":  False,
     },
     "answer": {
         "energy_offset":    +0.00,
@@ -89,6 +131,8 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "normal",
         "caption_style":    "standard",
         "motion_hint":      "slow_pan",
+        "speech_intensity":  0.55,
+        "silence_eligible":  False,
     },
     "escalation": {
         "energy_offset":    +0.15,
@@ -96,6 +140,26 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "normal",
         "caption_style":    "standard",
         "motion_hint":      "zoom_in",
+        "speech_intensity":  0.75,
+        "silence_eligible":  False,
+    },
+    "climax": {
+        "energy_offset":    +0.25,
+        "pace_modifier":    0.88,     # slow, devastating delivery
+        "transition_type":  "reveal",
+        "caption_style":    "emphasis",
+        "motion_hint":      "zoom_in",
+        "speech_intensity":  0.95,    # maximum intensity
+        "silence_eligible":  True,    # silence before climax is powerful
+    },
+    "twist": {
+        "energy_offset":    +0.20,
+        "pace_modifier":    0.85,     # slow for the turn
+        "transition_type":  "reveal",
+        "caption_style":    "emphasis",
+        "motion_hint":      "zoom_in",
+        "speech_intensity":  0.85,
+        "silence_eligible":  True,
     },
     "reveal": {
         "energy_offset":    +0.20,
@@ -103,6 +167,17 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "reveal",
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
+        "speech_intensity":  0.9,
+        "silence_eligible":  True,
+    },
+    "falling_action": {
+        "energy_offset":    -0.10,
+        "pace_modifier":    0.92,     # decelerating
+        "transition_type":  "normal",
+        "caption_style":    "standard",
+        "motion_hint":      "zoom_out",
+        "speech_intensity":  0.5,
+        "silence_eligible":  False,
     },
     "breathing_room": {
         "energy_offset":    -0.25,
@@ -110,6 +185,26 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "act",
         "caption_style":    "whisper",
         "motion_hint":      "breathe",
+        "speech_intensity":  0.3,     # near-whisper
+        "silence_eligible":  True,
+    },
+    "reflection": {
+        "energy_offset":    -0.15,
+        "pace_modifier":    0.88,     # thoughtful, weighted
+        "transition_type":  "act",
+        "caption_style":    "whisper",
+        "motion_hint":      "breathe",
+        "speech_intensity":  0.4,
+        "silence_eligible":  True,
+    },
+    "resolution": {
+        "energy_offset":    -0.05,
+        "pace_modifier":    0.92,
+        "transition_type":  "normal",
+        "caption_style":    "standard",
+        "motion_hint":      "zoom_out",
+        "speech_intensity":  0.5,
+        "silence_eligible":  False,
     },
     "conclusion": {
         "energy_offset":    -0.05,
@@ -117,6 +212,17 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "act",
         "caption_style":    "standard",
         "motion_hint":      "zoom_out",
+        "speech_intensity":  0.5,
+        "silence_eligible":  False,
+    },
+    "coda": {
+        "energy_offset":    -0.20,
+        "pace_modifier":    0.85,     # final thought, lingering
+        "transition_type":  "act",
+        "caption_style":    "whisper",
+        "motion_hint":      "breathe",
+        "speech_intensity":  0.35,
+        "silence_eligible":  True,
     },
     "callback": {
         "energy_offset":    +0.10,
@@ -124,6 +230,8 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "normal",
         "caption_style":    "emphasis",
         "motion_hint":      "slow_pan",
+        "speech_intensity":  0.65,
+        "silence_eligible":  False,
     },
     "silence": {
         "energy_offset":    -0.35,
@@ -131,6 +239,8 @@ _FUNCTION_MODIFIERS = {
         "transition_type":  "silence",
         "caption_style":    "whisper",
         "motion_hint":      "breathe",
+        "speech_intensity":  0.2,     # barely audible
+        "silence_eligible":  True,
     },
 }
 
@@ -219,6 +329,18 @@ def resolve_scene_intent(
     # 6. Caption style
     caption_style = modifiers["caption_style"]
 
+    # 7. Speech intensity — how intensely the narrator delivers this scene
+    speech_intensity = modifiers.get("speech_intensity", 0.5)
+
+    # 8. Silence beat — coordinated audio+visual silence moment
+    # Fires when: function is silence-eligible AND transition is silence/act
+    # OR the blueprint silence window is active (82-88%)
+    silence_eligible = modifiers.get("silence_eligible", False)
+    silence_beat = (
+        (silence_eligible and transition_type in ("silence", "act"))
+        or transition_type == "silence"
+    )
+
     return {
         "intent_transition_type":   transition_type,
         "intent_motion_seed":       motion_seed,
@@ -226,6 +348,8 @@ def resolve_scene_intent(
         "intent_pace_modifier":     pace_modifier,
         "intent_caption_style":     caption_style,
         "intent_scene_energy":      round(energy, 3),
+        "intent_speech_intensity":  round(speech_intensity, 3),
+        "intent_silence_beat":      silence_beat,
     }
 
 

@@ -258,6 +258,8 @@ export interface AudioScene {
   end_time: number;
   intent_scene_energy?: number;
   intent_music_volume_base?: number;
+  intent_speech_intensity?: number;
+  intent_silence_beat?: boolean;
 }
 
 /**

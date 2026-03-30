@@ -41,6 +41,8 @@ interface Scene {
   intent_pace_modifier?: number;
   intent_caption_style?: 'standard' | 'emphasis' | 'whisper';
   intent_scene_energy?: number;
+  intent_speech_intensity?: number;
+  intent_silence_beat?: boolean;
   is_synthetic?: boolean;
   film_grain_intensity?: number;
   vignette_intensity?: number;
@@ -51,7 +53,7 @@ interface EndscreenRecommended {
   thumbnail: string;
 }
 interface AudioConfig {
-  ducking?: { speechVolume?: number; silenceVolume?: number; rampSeconds?: number };
+  ducking?: { speechVolume?: number; silenceVolume?: number; attackSeconds?: number; releaseSeconds?: number; rampSeconds?: number };
   actMultipliers?: { act1?: number; act2?: number; act3?: number; ending?: number };
   stemDucking?: {
     bass?: { speechVolume?: number; silenceVolume?: number };

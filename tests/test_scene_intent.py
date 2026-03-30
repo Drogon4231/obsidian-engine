@@ -86,6 +86,8 @@ class TestResolveSceneIntent:
             "intent_pace_modifier",
             "intent_caption_style",
             "intent_scene_energy",
+            "intent_speech_intensity",
+            "intent_silence_beat",
         }
         assert expected_keys == set(intent.keys())
 
