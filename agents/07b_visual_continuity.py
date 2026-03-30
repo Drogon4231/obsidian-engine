@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from core.agent_wrapper import call_agent
 
 
-def run(scene_data: dict) -> dict:
+def run(scene_data: dict, parent_visual_bible: dict = None) -> dict:
     scenes = scene_data.get("scenes", [])
     topic = scene_data.get("topic", "")
     total_scenes = len(scenes)
@@ -106,10 +106,32 @@ Output strict JSON with this structure:
 
 Output ONLY the JSON. No preamble."""
 
+    # Series visual continuity: if parent bible exists, lock art_style and character descriptions
+    parent_constraint = ""
+    if parent_visual_bible:
+        parent_art = parent_visual_bible.get("art_style", "")
+        parent_chars = parent_visual_bible.get("character_descriptions", {})
+        parent_palette = parent_visual_bible.get("color_palette", [])
+        parts = []
+        if parent_art:
+            parts.append(f"LOCKED art_style (copy VERBATIM): \"{parent_art}\"")
+        if parent_palette:
+            parts.append(f"LOCKED color_palette: {parent_palette}")
+        if parent_chars:
+            char_lines = [f"  - {name}: {desc}" for name, desc in parent_chars.items()]
+            parts.append("LOCKED character_descriptions (copy VERBATIM for recurring characters):\n" + "\n".join(char_lines))
+        if parts:
+            parent_constraint = (
+                "\n\nSERIES CONTINUITY — This is a continuation. The following visual bible fields "
+                "are LOCKED from Part 1. You MUST copy them exactly. Only add NEW characters.\n\n"
+                + "\n\n".join(parts)
+            )
+            print(f"[Visual Continuity] Series mode: inheriting {len(parent_chars)} characters + art style from Part 1")
+
     prompt = f"""Create a visual bible and enhanced image prompts for this {total_scenes}-scene documentary.
 
 Topic: {topic}
-
+{parent_constraint}
 Scenes:
 {json.dumps(scenes_summary, indent=2)}
 

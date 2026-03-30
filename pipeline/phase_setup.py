@@ -62,12 +62,18 @@ def _load_parent_context(ctx, series_meta: dict) -> None:
                     logger.warning(f"[Series] Could not load parent state by slug: {e}")
 
     if parent_state:
+        # Extract visual bible from parent's stage 7 (scene breakdown + visual continuity)
+        parent_stage_7 = parent_state.get("stage_7", {})
+        parent_visual_bible = None
+        if isinstance(parent_stage_7, dict):
+            parent_visual_bible = parent_stage_7.get("visual_bible")
         ctx.parent_context = {
             "research": parent_state.get("stage_1"),
             "angle": parent_state.get("stage_2"),
             "script": parent_state.get("stage_4"),
             "blueprint": parent_state.get("stage_3"),
             "series_plan": parent_state.get("series_plan"),
+            "visual_bible": parent_visual_bible,
         }
         part_num = series_meta.get("series_part", 2)
         logger.info(f"[Series] Part {part_num} has parent context: "

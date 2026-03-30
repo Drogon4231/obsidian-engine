@@ -328,10 +328,14 @@ def _run_wave2(ctx: PipelineContext, runner: StageRunner) -> None:
     a07b = ctx.agents.get("a07b")
     a_tts_format = ctx.agents.get("a_tts_format")
 
-    # Visual Continuity
+    # Visual Continuity (pass parent visual bible for series continuity)
     if a07b and ctx.scenes_data:
         try:
-            enhanced = a07b.run(ctx.scenes_data)
+            parent_bible = None
+            if ctx.parent_context and ctx.parent_context.get("visual_bible"):
+                parent_bible = ctx.parent_context["visual_bible"]
+                logger.info("[Pipeline] Series continuity: injecting parent visual bible into 07b")
+            enhanced = a07b.run(ctx.scenes_data, parent_visual_bible=parent_bible)
             if enhanced and enhanced.get("scenes"):
                 ctx.scenes_data = enhanced
                 runner.mark(7, ctx.scenes_data)

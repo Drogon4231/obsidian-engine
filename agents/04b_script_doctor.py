@@ -193,6 +193,18 @@ If exposition is front-loaded, one of your specific_fixes MUST address it."""
     hook_register = blueprint.get("hook_register", "TENSION")
     cold_open = blueprint.get("cold_open", "")
 
+    # Series cliffhanger protection — inject constraint
+    cliffhanger = blueprint.get("part_1_cliffhanger", "")
+    series_constraint = ""
+    if cliffhanger:
+        series_constraint = (
+            f"\n\nSERIES CLIFFHANGER PROTECTION: This is Part 1 of a series. "
+            f"The final 30 words of this script are LOCKED — they must end on this cliffhanger: "
+            f"\"{cliffhanger}\". Do NOT suggest fixes that resolve, soften, or complete the ending. "
+            f"Your quality pass ends at the reflection beat. The cliffhanger is untouchable."
+        )
+        system += series_constraint
+
     prompt = f"""Evaluate this script for The Obsidian Archive.
 
 TOPIC: {topic}
