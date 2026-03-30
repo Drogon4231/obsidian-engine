@@ -104,10 +104,10 @@ def attach_metrics(youtube_id: str, metrics_dict: dict) -> bool:
             from core.param_optimizer import ParamOptimizer, PerformanceMetrics
             pm = PerformanceMetrics(
                 retention_pct=metrics_dict.get("retention_pct", 0),
-                views_velocity=metrics_dict.get("views_velocity", 0),
+                views_velocity_48h=metrics_dict.get("views_velocity_48h", metrics_dict.get("views_velocity", 0)),
                 engagement_rate=metrics_dict.get("engagement_rate", 0),
-                sentiment_score=metrics_dict.get("sentiment_score", 0),
-                hook_retention_pct=metrics_dict.get("hook_retention_pct", 0),
+                comment_sentiment_score=metrics_dict.get("comment_sentiment_score", metrics_dict.get("sentiment_score", 0)),
+                hook_retention_30s=metrics_dict.get("hook_retention_30s", metrics_dict.get("hook_retention_pct", 0)),
             )
             optimizer = ParamOptimizer()
             loss_value = optimizer.compute_loss(pm)
@@ -139,14 +139,20 @@ def attach_metrics(youtube_id: str, metrics_dict: dict) -> bool:
 def load_observations(min_age_hours: int = 48, limit: int = 50) -> list[dict] | None:
     """Load recent observations that have attached metrics.
 
+    Only returns observations older than min_age_hours to ensure YouTube
+    retention/CTR data has stabilised before the optimizer trains on them.
+
     Returns list of observation dicts with params + metrics, or None on failure.
     """
     try:
+        from datetime import datetime, timezone, timedelta
         from clients.supabase_client import get_client
 
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=min_age_hours)).isoformat()
         result = get_client().table("param_observations") \
             .select("*") \
             .not_.is_("metrics", "null") \
+            .lt("created_at", cutoff) \
             .order("created_at", desc=True) \
             .limit(limit) \
             .execute()

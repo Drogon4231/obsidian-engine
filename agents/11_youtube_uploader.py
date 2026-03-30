@@ -494,7 +494,13 @@ def build_description(seo_data, verification_data=None):
     # description may be a dict {"hook_lines":..., "full_description":..., "hashtags":[...]}
     desc_raw    = seo_data.get("description", "")
     if isinstance(desc_raw, dict):
-        description = desc_raw.get("full_description") or desc_raw.get("hook_lines") or ""
+        hook_lines = (desc_raw.get("hook_lines") or "").strip()
+        full_desc = (desc_raw.get("full_description") or "").strip()
+        # Prepend hook_lines (visible before "Show More") before full description
+        if hook_lines and full_desc:
+            description = hook_lines + "\n\n" + full_desc
+        else:
+            description = full_desc or hook_lines or ""
         hashtags    = desc_raw.get("hashtags", [])
     else:
         description = desc_raw

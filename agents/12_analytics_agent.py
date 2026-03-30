@@ -246,7 +246,7 @@ def fetch_first_48h_performance(youtube_analytics, video_id: str, upload_date: s
 
 # ── Audience Retention Curve ─────────────────────────────────────────────────
 
-def fetch_retention_curve(youtube_analytics, video_id: str) -> dict:
+def fetch_retention_curve(youtube_analytics, video_id: str, duration_seconds: float = 0) -> dict:
     """Fetch audience retention curve (0-100% of video duration)."""
     default = {
         "retention_curve": [],
@@ -279,7 +279,11 @@ def fetch_retention_curve(youtube_analytics, video_id: str) -> dict:
 
         # Normalize: YouTube returns audienceWatchRatio relative to views
         # curve[i] represents retention at i% of video
-        hook_30s_idx = min(5, len(curve) - 1)  # ~5% mark approximates 30s for 10-min video
+        # Compute actual 30-second index from video duration when available
+        if duration_seconds > 0 and len(curve) > 0:
+            hook_30s_idx = min(int(30 / duration_seconds * len(curve)), len(curve) - 1)
+        else:
+            hook_30s_idx = min(5, len(curve) - 1)  # fallback: ~5% for ~10-min video
         mid_idx = len(curve) // 2
         end_idx = max(0, len(curve) - 3)
 
@@ -1872,7 +1876,7 @@ def run() -> dict:
 
             # Retention curve
             try:
-                retention = fetch_retention_curve(yt_analytics, youtube_id)
+                retention = fetch_retention_curve(yt_analytics, youtube_id, duration_seconds=video.get("duration_seconds", 0) or 0)
                 row["retention_curve_data"] = retention
                 all_retention_curves.append(retention)
             except Exception as e:
@@ -2397,10 +2401,10 @@ def run() -> dict:
                             params=obs.get("params", {}),
                             metrics=PerformanceMetrics(
                                 retention_pct=metrics_data.get("retention_pct", 0),
-                                views_velocity=metrics_data.get("views_velocity", 0),
+                                views_velocity_48h=metrics_data.get("views_velocity_48h", metrics_data.get("views_velocity", 0)),
                                 engagement_rate=metrics_data.get("engagement_rate", 0),
-                                sentiment_score=metrics_data.get("sentiment_score", 0.5),
-                                hook_retention_pct=metrics_data.get("hook_retention_pct", 0),
+                                comment_sentiment_score=metrics_data.get("comment_sentiment_score", metrics_data.get("sentiment_score", 0.5)),
+                                hook_retention_30s=metrics_data.get("hook_retention_30s", metrics_data.get("hook_retention_pct", 0)),
                             ),
                             era=obs.get("era", "unknown"),
                             render_compliance=obs.get("render_compliance"),

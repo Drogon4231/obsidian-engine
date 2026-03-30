@@ -840,17 +840,16 @@ def quality_audio_video_sync(audio_data: dict, scenes_data: dict) -> list[str]:
         return warnings
 
     # Check total scene duration vs audio duration
-    # Scenes may have end_time (absolute) or duration_seconds (per-scene)
+    # Only meaningful when scenes have actual end_time (from convert stage).
+    # Stage 7 duration_seconds are estimates (130 WPM) — always drift vs actual audio.
     has_end_time = any(s.get("end_time") for s in scenes)
     if has_end_time:
         last_end = max(s.get("end_time", 0) for s in scenes)
-    else:
-        last_end = sum(s.get("duration_seconds", 0) for s in scenes)
-    if last_end > 0 and abs(audio_dur - last_end) > 5:
-        warnings.append(
-            f"Audio/scene sync mismatch: audio={audio_dur:.1f}s, scenes total={last_end:.1f}s "
-            f"(drift {abs(audio_dur - last_end):.1f}s)."
-        )
+        if last_end > 0 and abs(audio_dur - last_end) > 5:
+            warnings.append(
+                f"Audio/scene sync mismatch: audio={audio_dur:.1f}s, scenes total={last_end:.1f}s "
+                f"(drift {abs(audio_dur - last_end):.1f}s)."
+            )
 
     # Check word timestamps span vs audio duration
     ts_path = audio_data.get("timestamps_path", "")
@@ -1015,9 +1014,22 @@ def quality_plagiarism(script_data: dict, research_data: dict) -> list[str]:
     return warnings
 
 
-def quality_thumbnail(seo_data: dict) -> list[str]:
-    """Check thumbnail-related quality from SEO output."""
+def quality_thumbnail(seo_data: dict, thumbnail_data: dict | None = None) -> list[str]:
+    """Check thumbnail-related quality from SEO output and thumbnail agent result."""
     warnings = []
+
+    # Thumbnail agent output is stored separately from SEO data
+    if thumbnail_data and thumbnail_data.get("thumbnail_path"):
+        # Thumbnail was generated — check text overlay length
+        text_overlay = thumbnail_data.get("concept", "")
+        if text_overlay and len(text_overlay) > 35:
+            warnings.append(
+                f"Thumbnail text too long ({len(text_overlay)} chars) — "
+                f"max 3-5 words for mobile readability."
+            )
+        return warnings
+
+    # Fall back to SEO-embedded thumbnail guidance
     thumb = seo_data.get("thumbnail_guidance", seo_data.get("thumbnail", {}))
     if isinstance(thumb, str):
         if len(thumb) < 20:
@@ -1030,7 +1042,9 @@ def quality_thumbnail(seo_data: dict) -> list[str]:
                 f"Thumbnail text too long ({len(text_overlay)} chars) — "
                 f"max 3-5 words for mobile readability."
             )
-    if not thumb:
+    # Also check thumbnail_concepts from SEO agent
+    thumb_concepts = seo_data.get("thumbnail_concepts", [])
+    if not thumb and not thumb_concepts:
         warnings.append("No thumbnail guidance provided — thumbnails drive 80%+ of CTR.")
 
     return warnings
@@ -1056,14 +1070,17 @@ def quality_cross_pipeline(pipeline_outputs: dict) -> list[str]:
             )
 
     # Audio duration vs video scene total
+    # Only compare when scenes have actual end_time (from convert stage).
+    # Stage 7 duration_seconds are estimates (130 WPM) — always drift vs actual audio.
     if audio and scenes:
+        has_end_time = any(s.get("end_time") for s in scenes)
         audio_dur = audio.get("total_duration_seconds", 0)
-        total_scene_dur = sum(s.get("duration_seconds", 0) for s in scenes)
-        if total_scene_dur > 0 and audio_dur > 0:
-            drift = abs(audio_dur - total_scene_dur)
+        if has_end_time and audio_dur > 0:
+            last_end = max(s.get("end_time", 0) for s in scenes)
+            drift = abs(audio_dur - last_end)
             if drift > 10:
                 warnings.append(
-                    f"Duration mismatch: audio={audio_dur:.0f}s vs scenes total={total_scene_dur:.0f}s "
+                    f"Duration mismatch: audio={audio_dur:.0f}s vs scenes total={last_end:.0f}s "
                     f"(drift {drift:.0f}s)."
                 )
 
@@ -1149,15 +1166,23 @@ def quality_seo_completeness(seo_data: dict) -> list[str]:
     """Check SEO metadata completeness: hashtags, keywords in description, etc."""
     warnings = []
 
-    # Hashtags
+    # Hashtags — may be top-level or nested inside description dict
     tags = seo_data.get("tags", []) or seo_data.get("keywords", [])
     hashtags = seo_data.get("hashtags", [])
+    desc_raw = seo_data.get("description") or seo_data.get("video_description", "")
+    if not hashtags and isinstance(desc_raw, dict):
+        hashtags = desc_raw.get("hashtags", [])
     if not hashtags and tags:
         warnings.append("No #hashtags specified — YouTube supports up to 15 in description.")
 
     # Description keyword density
-    desc_raw = seo_data.get("description") or seo_data.get("video_description", "")
-    description = str(desc_raw) if not isinstance(desc_raw, dict) else str(desc_raw.get("full_description", ""))
+    if isinstance(desc_raw, dict):
+        description = " ".join(filter(None, [
+            desc_raw.get("hook_lines", ""),
+            desc_raw.get("full_description", ""),
+        ]))
+    else:
+        description = str(desc_raw) if desc_raw else ""
     title = seo_data.get("recommended_title") or seo_data.get("title") or seo_data.get("video_title", "")
 
     if title and description:
@@ -1632,7 +1657,8 @@ def run_all_quality_checks(pipeline_outputs: dict) -> dict:
     all_warnings.extend(quality_video_technical(video_path))
     all_warnings.extend(quality_content_policy(script))
     all_warnings.extend(quality_plagiarism(script, research))
-    all_warnings.extend(quality_thumbnail(seo))
+    thumbnail = pipeline_outputs.get("thumbnail", {})
+    all_warnings.extend(quality_thumbnail(seo, thumbnail))
     all_warnings.extend(quality_cross_pipeline(pipeline_outputs))
     all_warnings.extend(quality_duration_variance(script, audio))
     all_warnings.extend(quality_script_sentiment(script))

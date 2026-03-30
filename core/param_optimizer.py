@@ -546,7 +546,7 @@ class ParamOptimizer:
         # (low compliance = params weren't honored, unreliable for gradient)
         reliable_obs = [
             o for o in observations
-            if o.render_compliance >= 0.5
+            if (o.render_compliance or 0.0) >= 0.5
         ]
 
         state.epoch += 1
@@ -620,9 +620,9 @@ class ParamOptimizer:
             proposals.sort(key=lambda p: p.confidence, reverse=True)
             proposals = proposals[:MAX_PROPOSALS_PER_CYCLE]
 
-        # Generate exploration for next video
+        # Generate exploration for next video (skip during rollback cooldown)
         exploration = None
-        if param_specs:
+        if param_specs and state.cooldown_remaining <= 0:
             target_params = learnable_params or list(param_specs.keys())
             exploration = self.generate_exploration(
                 state, target_params, current_params, param_specs

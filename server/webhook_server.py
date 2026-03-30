@@ -1166,6 +1166,7 @@ def api_pulse():
         snap = {k: _state.get(k) for k in (
             "running", "analytics_running", "topic", "stage", "stage_num",
             "last_status", "started_at", "finished_at", "active_jobs",
+            "pipeline_done",
         )}
 
     # Cached expensive queries
@@ -1187,6 +1188,7 @@ def api_pulse():
         "started_at": snap["started_at"],
         "finished_at": snap["finished_at"],
         "analytics_running": snap["analytics_running"],
+        "pipeline_done": snap.get("pipeline_done", False),
         "active_jobs": snap.get("active_jobs", {}),
         "queue_depth": queue_depth,
         "errors_24h": errors_24h,

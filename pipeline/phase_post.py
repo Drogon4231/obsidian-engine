@@ -382,6 +382,7 @@ def _run_quality_report(ctx: PipelineContext) -> None:
             "audio": ctx.state.get("stage_8", {}),
             "images": ctx.state.get("manifest", ctx.state.get("stage_9", {})),
             "seo": ctx.state.get("stage_6", {}),
+            "thumbnail": ctx.state.get("thumbnail", {}),
             "video_path": ctx.state.get("stage_12", ""),
         }
         qc = qg.run_all_quality_checks(pipeline_outputs)
