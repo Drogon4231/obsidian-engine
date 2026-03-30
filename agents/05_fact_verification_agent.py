@@ -168,7 +168,7 @@ def run(script: dict, research: dict) -> dict:
         user_prompt=f"""Topic: {topic}
 
 Script to verify:
-{script.get('full_script', '')[:3000]}
+{script.get('full_script', '')[:10000]}
 
 Claims requiring verification:
 {json.dumps(verification_notes, indent=2)}

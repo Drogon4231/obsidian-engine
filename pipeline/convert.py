@@ -416,7 +416,14 @@ def run_convert(manifest, audio_data, topic="", era=""):
                 s["end_time"] = s.get("end_time", 0) + 3.0
             total_duration += 3.0
             video_data["total_duration_seconds"] = total_duration
-            logger.info(f"[Convert] ✓ Injected 3.0s reflection scene at act3→ending boundary (index {inject_idx})")
+            # Shift word timestamps that fall at or after the injection boundary
+            # so captions stay in sync with their shifted scenes
+            reflection_dur = 3.0
+            for w in words:
+                if w.get("start", 0) >= act3_end_time:
+                    w["start"] = w.get("start", 0) + reflection_dur
+                    w["end"] = w.get("end", 0) + reflection_dur
+            logger.info(f"[Convert] ✓ Injected {reflection_dur}s reflection scene at act3→ending boundary (index {inject_idx})")
     except Exception as _refl_err:
         logger.warning(f"[Convert] Reflection scene injection skipped: {_refl_err}")
 
@@ -481,11 +488,7 @@ def run_convert(manifest, audio_data, topic="", era=""):
     except Exception:
         pass  # Non-fatal — Remotion uses its own defaults if missing
 
-    vd_path = REMOTION_SRC / "video-data.json"
-    with open(vd_path, "w") as f:
-        json.dump(video_data, f, indent=2)
-
-    # Build scene manifest for analytics (per-scene metadata for retention correlation)
+    # Build scene manifest for analytics BEFORE json.dump so it's included in video-data.json
     scene_manifest = []
     for i, sc in enumerate(remotion_scenes):
         st = sc.get("start_time", 0) or 0
@@ -518,6 +521,10 @@ def run_convert(manifest, audio_data, topic="", era=""):
             "characters_mentioned": sc.get("characters_mentioned", []),
         })
     video_data["scene_manifest"] = scene_manifest
+
+    vd_path = REMOTION_SRC / "video-data.json"
+    with open(vd_path, "w") as f:
+        json.dump(video_data, f, indent=2)
 
     # Copy audio
     shutil.copy2(MEDIA_DIR / "narration.mp3", REMOTION_PUBLIC / "narration.mp3")

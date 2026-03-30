@@ -206,7 +206,7 @@ def _save_short_to_supabase(ctx, _short_script, _short_upload_result):
             pipeline_state={
                 "is_short": True, "era": ctx.state.get("era", "other"),
                 "parent_topic": ctx.topic,
-                "parent_youtube_id": ctx.state.get("youtube_id", ""),
+                "parent_youtube_id": (ctx.state.get("stage_13") or {}).get("video_id", ""),
                 "youtube_upload_date": datetime.now().strftime("%Y-%m-%d"),
                 "production_params": {
                     "voice_speed": short_audio_data.get("production_params", {}).get("voice_speed", 0.88),

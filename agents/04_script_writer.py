@@ -253,7 +253,7 @@ Write the complete script now. Every word counts."""
                     '{"hook_strength": N, "emotional_pacing": N, "personality": N, "information_density": N, '
                     '"weakest_area": "brief note on what to fix", "overall": N}'
                 ),
-                user_prompt=f"Script ({word_count} words):\n\n{full_script[:4000]}",
+                user_prompt=f"Script ({word_count} words):\n\n{full_script[:12000]}",
                 max_tokens=200,
                 effort_offset=-1,  # Sonnet for evaluation
                 stage_num=4,

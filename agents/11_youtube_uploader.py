@@ -811,7 +811,7 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
 
     return {"video_id": video_id, "url": video_url}
 
-def run(seo_data, manifest, verification_data=None, research_data=None, privacy="private"):
+def run(seo_data, manifest, verification_data=None, research_data=None, privacy="unlisted"):
     """Main entry point called from run_pipeline.py"""
 
     # Find latest rendered video
@@ -924,11 +924,11 @@ if __name__ == "__main__":
     verification_data = state.get("stage_5", {})
     research_data     = state.get("stage_1", {})
 
-    privacy = "private"
+    privacy = "unlisted"
+    if "--private" in sys.argv:
+        privacy = "private"
     if "--public" in sys.argv:
         privacy = "public"
-    if "--unlisted" in sys.argv:
-        privacy = "unlisted"
 
     print(f"[YouTube] Privacy mode: {privacy}")
     result = run(seo_data, manifest, verification_data, research_data=research_data, privacy=privacy)
