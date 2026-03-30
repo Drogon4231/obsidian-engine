@@ -204,3 +204,65 @@ class TestResolveAllScenes:
             assert res["text"] == orig["text"]
             assert res["mood"] == orig["mood"]
             assert res["scene_number"] == orig["scene_number"]
+
+
+# ── Silence Beat & Speech Intensity ─────────────────────────────────────────
+
+class TestSilenceBeat:
+    @pytest.mark.unit
+    def test_silence_function_has_silence_beat(self):
+        """silence function should produce silence_beat=True."""
+        scene = {"mood": "dark", "narrative_function": "silence"}
+        intent = resolve_scene_intent(scene, 5, 10)
+        assert intent["intent_silence_beat"] is True
+
+    @pytest.mark.unit
+    def test_breathing_room_with_act_transition_has_silence_beat(self):
+        """breathing_room is silence_eligible and gets 'act' transition → silence_beat=True."""
+        scene = {"mood": "reverent", "narrative_function": "breathing_room"}
+        intent = resolve_scene_intent(scene, 5, 10)
+        # breathing_room: silence_eligible=True, transition_type="act"
+        assert intent["intent_silence_beat"] is True
+
+    @pytest.mark.unit
+    def test_exposition_no_silence_beat(self):
+        """exposition should NOT produce a silence beat."""
+        scene = {"mood": "dark", "narrative_function": "exposition"}
+        intent = resolve_scene_intent(scene, 3, 10)
+        assert intent["intent_silence_beat"] is False
+
+
+class TestSpeechIntensity:
+    @pytest.mark.unit
+    def test_climax_high_speech_intensity(self):
+        """climax function should have speech_intensity >= 0.8."""
+        scene = {"mood": "dramatic", "narrative_function": "climax"}
+        intent = resolve_scene_intent(scene, 7, 10)
+        assert intent["intent_speech_intensity"] >= 0.8
+
+    @pytest.mark.unit
+    def test_silence_low_speech_intensity(self):
+        """silence function should have speech_intensity <= 0.3."""
+        scene = {"mood": "dark", "narrative_function": "silence"}
+        intent = resolve_scene_intent(scene, 8, 10)
+        assert intent["intent_speech_intensity"] <= 0.3
+
+
+class TestFunctionModifiersCoverage:
+    @pytest.mark.unit
+    def test_all_20_functions_in_modifiers(self):
+        """All 20 narrative functions must have explicit entries in _FUNCTION_MODIFIERS."""
+        expected_functions = {
+            "cold_open", "hook", "setup", "exposition", "rising_action",
+            "complication", "question", "answer", "escalation", "climax",
+            "twist", "reveal", "falling_action", "breathing_room", "reflection",
+            "resolution", "conclusion", "coda", "callback", "silence",
+        }
+        assert expected_functions == set(_FUNCTION_MODIFIERS.keys())
+
+    @pytest.mark.unit
+    def test_cold_open_exists_and_has_speech_intensity(self):
+        """cold_open must exist and have a speech_intensity value."""
+        assert "cold_open" in _FUNCTION_MODIFIERS
+        assert "speech_intensity" in _FUNCTION_MODIFIERS["cold_open"]
+        assert isinstance(_FUNCTION_MODIFIERS["cold_open"]["speech_intensity"], (int, float))

@@ -82,6 +82,20 @@ class TestParamBoundsConsistency:
         assert len(PARAM_BOUNDS) == 37
         assert len(PARAM_DEFAULTS) == 37
 
+    def test_all_bounds_have_min_step(self):
+        """Every key in PARAM_BOUNDS (except TS-side volume.*) must exist in PARAM_MIN_STEP.
+
+        volume.act1-act3/ending are TS-side multipliers that don't need
+        perceptual min-step on the Python side, but all other params do.
+        """
+        excluded_prefixes = ("volume.",)
+        for key in PARAM_BOUNDS:
+            if any(key.startswith(p) for p in excluded_prefixes):
+                continue
+            assert key in PARAM_MIN_STEP, (
+                f"{key} exists in PARAM_BOUNDS but missing from PARAM_MIN_STEP"
+            )
+
 
 # ── get_override ──────────────────────────────────────────────────────────────
 
