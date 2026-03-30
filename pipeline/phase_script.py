@@ -169,6 +169,7 @@ def _apply_series_plan(ctx: PipelineContext) -> None:
                 series_plan.get("part_1_cliffhanger", blueprint["ending"].get("final_line", ""))
             )
             blueprint["ending"]["cta"] = "Part 2 drops next. Subscribe so you don't miss it."
+        blueprint["part_1_cliffhanger"] = cliffhanger
         blueprint["part_1_constraint"] = (
             f"IMPORTANT: This is Part 1 of a 2-part series. "
             f"Focus ONLY on: {part1_focus}. "

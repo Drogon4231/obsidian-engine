@@ -271,6 +271,7 @@ Return a JSON array of exactly {target_scenes} scene objects."""
         scene.setdefault("retention_hook", None)
         scene.setdefault("visual_treatment", "standard")
         scene.setdefault("is_breathing_room", False)
+        scene.setdefault("claim_confidence", None)
 
     # Post-process: flag scenes at danger zones that lack retention hooks
     if danger_zones and total > 0:
