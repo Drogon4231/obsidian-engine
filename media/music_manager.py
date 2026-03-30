@@ -405,6 +405,15 @@ def get_smart_music_for_video(scenes: list[dict], total_duration: float = 600) -
     free = [t for t in candidates if not t["is_premium"]]
     pool = premium if premium else free
 
+    # Read optimizer-tuned music params (self-tunes from YouTube retention)
+    try:
+        from core.param_overrides import get_override
+        _corr_weight = get_override("music.energy_correlation_weight", 0.7)
+        _usage_penalty = get_override("music.usage_penalty", 0.02)
+    except Exception:
+        _corr_weight = 0.7
+        _usage_penalty = 0.02
+
     # Score each track
     usage = _load_usage()
     scored = []
@@ -420,9 +429,12 @@ def get_smart_music_for_video(scenes: list[dict], total_duration: float = 600) -
 
         corr, offset = _score_track(curve, video_arc, dur, total_duration)
 
-        # Small penalty for heavily used tracks (max -0.1)
+        # Weight correlation by optimizer-tuned importance
+        corr *= _corr_weight
+
+        # Penalty for heavily used tracks (optimizer-tuned per-use penalty, max -0.1)
         use_count = usage.get(fname, {}).get("use_count", 0)
-        corr -= min(use_count * 0.02, 0.1)
+        corr -= min(use_count * _usage_penalty, 0.1)
 
         scored.append({
             "track": track,

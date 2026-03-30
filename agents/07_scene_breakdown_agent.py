@@ -125,9 +125,18 @@ For scenes that fall on a danger zone, include a "retention_hook" field — a br
     system = f"""You are a documentary video editor breaking a narration script into exactly {target_scenes} scenes.
 Each scene will drive AI image generation, so your visual descriptions must be CINEMATIC and SPECIFIC.
 
+PACING WAVE — scene density must vary like a heartbeat, not a metronome:
+- Hook scenes: 15-25 words (punchy, fast cuts)
+- Act 1 setup: 30-45 words (measured, world-building)
+- Act 2 escalation: 20-35 words (accelerating, tension)
+- Reveal/climax: 10-20 words (devastatingly short — let the weight land)
+- Breathing room: 5-10 words (near-silence, single image)
+- Ending: 15-25 words (reflective, final thought)
+Do NOT make every scene the same length. The variation IS the rhythm.
+
 For each scene output:
 - scene_id: sequential number starting at 1
-- narration: the exact text for this scene (20-40 words)
+- narration: the exact text for this scene (vary 5-45 words based on pacing wave above)
 - duration_seconds: estimated speaking time (130 words per minute)
 - visual_type: "historical_art" | "broll_atmospheric" | "broll_nature" | "map" | "text_overlay"
 - visual_description: CINEMATIC image prompt (40-80 words) using CAMERA LANGUAGE — describe the SHOT, not just the scene. Include:

@@ -459,6 +459,7 @@ def run_convert(manifest, audio_data, topic="", era=""):
                 "act3": get_override("volume.act3", 0.60),
                 "ending": get_override("volume.ending", 1.40),
             },
+            "crossfadeStartPct": get_override("music.crossfade_start_pct", 0.60),
         }
         # Stem ducking config — reads from optimizer (self-tunes from analytics)
         if music_stems:

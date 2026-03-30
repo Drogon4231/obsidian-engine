@@ -53,6 +53,13 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
     "stem_ducking.drums.silence":      (0.15, 0.45),
     "stem_ducking.instruments.speech": (0.01, 0.12),
     "stem_ducking.instruments.silence": (0.25, 0.55),
+    # Music selection tuning (closed-loop from analytics)
+    "music.energy_correlation_weight":  (0.3, 1.0),   # how much energy curve match matters vs random
+    "music.usage_penalty":              (0.01, 0.10),  # per-use penalty to encourage rotation
+    "music.crossfade_start_pct":        (0.50, 0.75),  # when Act 3 crossfade begins (% of video)
+    # Color harmonization
+    "color.blend_factor":               (0.02, 0.12),  # how strongly palette tints images (0=none)
+    "color.contrast_boost":             (1.00, 1.08),  # contrast compensation after blend
 }
 
 PARAM_DEFAULTS: dict[str, float] = {
@@ -88,6 +95,11 @@ PARAM_DEFAULTS: dict[str, float] = {
     "stem_ducking.drums.silence": 0.30,
     "stem_ducking.instruments.speech": 0.05,
     "stem_ducking.instruments.silence": 0.40,
+    "music.energy_correlation_weight": 0.7,
+    "music.usage_penalty": 0.02,
+    "music.crossfade_start_pct": 0.60,
+    "color.blend_factor": 0.05,
+    "color.contrast_boost": 1.03,
 }
 
 # Minimum perceptual step sizes (below these, changes are inaudible)
@@ -117,6 +129,11 @@ PARAM_MIN_STEP: dict[str, float] = {
     "stem_ducking.drums.silence": 0.03,
     "stem_ducking.instruments.speech": 0.01,
     "stem_ducking.instruments.silence": 0.03,
+    "music.energy_correlation_weight": 0.05,
+    "music.usage_penalty": 0.005,
+    "music.crossfade_start_pct": 0.03,
+    "color.blend_factor": 0.01,
+    "color.contrast_boost": 0.01,
 }
 
 # Brand consistency: shorts params that should stay within threshold of LF defaults

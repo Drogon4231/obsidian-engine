@@ -127,8 +127,14 @@ def _apply_color_harmonization(scenes: list, palette: list[str]):
     avg_g = sum(c[1] for c in palette_rgb) / len(palette_rgb)
     avg_b = sum(c[2] for c in palette_rgb) / len(palette_rgb)
 
-    # Determine warmth/coolness shift (subtle — 5% blend)
-    blend_factor = 0.05
+    # Read optimizer-tuned blend parameters
+    try:
+        from core.param_overrides import get_override
+        blend_factor = get_override("color.blend_factor", 0.05)
+        contrast_boost = get_override("color.contrast_boost", 1.03)
+    except Exception:
+        blend_factor = 0.05
+        contrast_boost = 1.03
 
     harmonized = 0
     for scene in scenes:
@@ -141,9 +147,9 @@ def _apply_color_harmonization(scenes: list, palette: list[str]):
             overlay = Image.new("RGB", img.size, (int(avg_r), int(avg_g), int(avg_b)))
             # Blend very subtly (5%) to tint toward palette
             harmonized_img = Image.blend(img, overlay, blend_factor)
-            # Slight contrast boost to counteract the flattening from blend
+            # Contrast boost to counteract the flattening from blend (optimizer-tuned)
             enhancer = ImageEnhance.Contrast(harmonized_img)
-            harmonized_img = enhancer.enhance(1.03)
+            harmonized_img = enhancer.enhance(contrast_boost)
             harmonized_img.save(img_path, "JPEG", quality=92)
             harmonized += 1
         except Exception:
