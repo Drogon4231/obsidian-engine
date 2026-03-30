@@ -145,13 +145,13 @@ describe('applyDucking', () => {
   });
 
   it('returns silenceVolume far from speech', () => {
-    expect(applyDucking(10.0, mask)).toBe(0.38);
+    expect(applyDucking(10.0, mask)).toBe(0.28);
   });
 
-  it('ramps between speech and silence', () => {
-    // At 0.25s from speech boundary: t = 0.25/0.5 = 0.5
-    const vol = applyDucking(2.25, mask);
-    expect(vol).toBeCloseTo(0.08 + 0.5 * 0.30, 2);
+  it('ramps between speech and silence with asymmetric timing', () => {
+    // At 0.2s after speech ends: release ramp, t = 0.2/0.4 = 0.5
+    const vol = applyDucking(2.2, mask);
+    expect(vol).toBeCloseTo(0.08 + 0.5 * 0.20, 2);
   });
 
   it('accepts custom ducking config', () => {

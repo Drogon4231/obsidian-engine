@@ -445,8 +445,9 @@ def run_convert(manifest, audio_data, topic="", era=""):
         audio_cfg = {
             "ducking": {
                 "speechVolume": get_override("ducking.speech_volume", 0.08),
-                "silenceVolume": get_override("ducking.silence_volume", 0.38),
-                "rampSeconds": get_override("ducking.ramp_seconds", 0.5),
+                "silenceVolume": get_override("ducking.silence_volume", 0.28),
+                "attackSeconds": get_override("ducking.attack_seconds", 0.1),
+                "releaseSeconds": get_override("ducking.release_seconds", 0.4),
             },
             "actMultipliers": {
                 "act1": get_override("volume.act1", 0.80),
@@ -459,11 +460,11 @@ def run_convert(manifest, audio_data, topic="", era=""):
         if music_stems:
             audio_cfg["stemDucking"] = {
                 "bass": {
-                    "speechVolume": get_override("stem_ducking.bass.speech", 0.15),
+                    "speechVolume": get_override("stem_ducking.bass.speech", 0.10),
                     "silenceVolume": get_override("stem_ducking.bass.silence", 0.35),
                 },
                 "drums": {
-                    "speechVolume": get_override("stem_ducking.drums.speech", 0.20),
+                    "speechVolume": get_override("stem_ducking.drums.speech", 0.08),
                     "silenceVolume": get_override("stem_ducking.drums.silence", 0.30),
                 },
                 "instruments": {

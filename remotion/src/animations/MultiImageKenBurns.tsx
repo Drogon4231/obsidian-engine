@@ -1,4 +1,4 @@
-import {useCurrentFrame, useVideoConfig, interpolate} from 'remotion';
+import {useCurrentFrame, useVideoConfig, interpolate, Sequence} from 'remotion';
 import {KenBurns} from './KenBurns';
 
 interface Props {
@@ -23,7 +23,7 @@ export const MultiImageKenBurns: React.FC<Props> = ({images, duration, seed = 0,
   }
 
   const n = images.length;
-  const segmentFrames = duration / n;
+  const segmentFrames = Math.floor(duration / n);
   // Crossfade window: 15% of segment duration (smooth blend)
   const crossfadeFrames = Math.max(Math.floor(segmentFrames * 0.15), Math.floor(fps * 0.4));
 
@@ -50,9 +50,13 @@ export const MultiImageKenBurns: React.FC<Props> = ({images, duration, seed = 0,
         // Each image gets a unique seed for different Ken Burns motion
         const imgSeed = seed + i * 3;
 
+        // Wrap each image in a Sequence so KenBurns' useCurrentFrame()
+        // resets to 0 at each image's start, giving correct motion speed
         return (
           <div key={i} style={{position:'absolute', top:0, left:0, right:0, bottom:0, opacity}}>
-            <KenBurns imageSrc={img} duration={duration} seed={imgSeed} treatment={treatment}/>
+            <Sequence from={segStart} durationInFrames={segmentFrames}>
+              <KenBurns imageSrc={img} duration={segmentFrames} seed={imgSeed} treatment={treatment}/>
+            </Sequence>
           </div>
         );
       })}

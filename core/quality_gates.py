@@ -390,7 +390,7 @@ def quality_audio(audio_data: dict) -> list[str]:
     Check audio generation output quality and return a list of warning strings.
 
     Warns if:
-    - Duration is less than 300 seconds (5 min) — too short for a standard episode
+    - Duration is less than 480 seconds (8 min) — below mid-roll ad eligibility
     - Duration is greater than 1200 seconds (20 min) — unusually long
     - Fewer than 100 word timestamps — alignment may be incomplete
     - Audio file is smaller than 1 MB on disk
@@ -398,10 +398,10 @@ def quality_audio(audio_data: dict) -> list[str]:
     warnings = []
 
     duration = audio_data.get("total_duration_seconds", 0)
-    if duration < 300:
+    if duration < 480:
         warnings.append(
             f"Audio duration short: {duration:.0f}s ({duration/60:.1f} min) — "
-            f"expected 5–20 minutes for a standard episode."
+            f"below 8 min mid-roll threshold. Target 9–11 min for series."
         )
     if duration > 1200:
         warnings.append(

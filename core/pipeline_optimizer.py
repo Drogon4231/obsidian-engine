@@ -6,6 +6,7 @@ Analyzes: stage timings, output quality, prompt effectiveness, cross-run trends.
 Writes a structured report to lessons_learned.json and prints a summary.
 """
 
+import os
 import sys
 import json
 import re
@@ -457,8 +458,12 @@ def _save_report(state: dict, report: dict, timings: dict, quality: dict,
         runs = data.setdefault("optimizer_runs", [])
         runs.append(entry)
         data["optimizer_runs"] = runs[-100:]  # keep last 100 for long-term trend analysis
-        with open(LESSONS_FILE, "w") as f:
+        tmp = LESSONS_FILE.with_suffix(".json.tmp")
+        with open(tmp, "w") as f:
             json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp.replace(LESSONS_FILE)
         print("[Optimizer] Report saved to lessons_learned.json")
     except Exception as e:
         print(f"[Optimizer] Could not save report: {e}")

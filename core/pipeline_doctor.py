@@ -6,6 +6,7 @@ Attempts to recover using categorized fix strategies before giving up.
 Records every intervention in lessons_learned.json.
 """
 
+import os
 import sys
 import json
 import time
@@ -232,8 +233,12 @@ def _record(stage_num: int, stage_name: str, error: Exception,
         interventions = data.setdefault("doctor_interventions", [])
         interventions.append(entry)
         data["doctor_interventions"] = interventions[-500:]  # keep last 500 for pattern recognition
-        with open(LESSONS_FILE, "w") as f:
+        tmp = LESSONS_FILE.with_suffix(".json.tmp")
+        with open(tmp, "w") as f:
             json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        tmp.replace(LESSONS_FILE)
     except Exception as e:
         logger.error(f"[Doctor] Could not save lesson: {e}")
 

@@ -353,7 +353,9 @@ def _run_thread(topic: str, resume_from: int, topic_id: str = None):
             })
             # Keep last 50 runs
             history = history[-50:]
-            history_file.write_text(json.dumps(history, indent=2))
+            tmp = history_file.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(history, indent=2))
+            tmp.replace(history_file)
         except Exception as e:
             _log(f"[Server] Failed to save run history: {e}")
         # Mark topic status in Supabase so it doesn't stay in_progress forever
@@ -397,7 +399,9 @@ def _run_thread(topic: str, resume_from: int, topic_id: str = None):
                 "stages_completed": _stages,
             })
             history = history[-50:]
-            history_file.write_text(json.dumps(history, indent=2))
+            tmp = history_file.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(history, indent=2))
+            tmp.replace(history_file)
         except Exception as he:
             _log(f"[Server] Failed to save run history: {he}")
         if topic_id:

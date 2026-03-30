@@ -146,25 +146,30 @@ export function buildVolumeEnvelope(
 // ── Ducking ────────────────────────────────────────────────────────────────
 
 export interface DuckingConfig {
-  /** Volume during speech (default: 0.13) */
+  /** Volume during speech (default: 0.08) */
   speechVolume?: number;
   /** Volume during silence (default: 0.28) */
   silenceVolume?: number;
-  /** Ramp duration in seconds (default: 0.5) */
+  /** Attack: seconds to duck DOWN when speech approaches (default: 0.1) */
+  attackSeconds?: number;
+  /** Release: seconds to bring music back UP after speech ends (default: 0.4) */
+  releaseSeconds?: number;
+  /** @deprecated Use attackSeconds/releaseSeconds. Symmetric ramp fallback. */
   rampSeconds?: number;
 }
 
-const DEFAULT_DUCKING: Required<DuckingConfig> = {
+const DEFAULT_DUCKING = {
   speechVolume: 0.08,
-  silenceVolume: 0.38,
-  rampSeconds: 0.5,
+  silenceVolume: 0.28,
+  attackSeconds: 0.1,
+  releaseSeconds: 0.4,
 };
 
 /**
  * Compute the ducked volume at a given time.
  *
- * Smoothly ramps between speechVolume (during narration) and
- * silenceVolume (during gaps) over rampSeconds.
+ * Uses asymmetric ramp: fast attack (duck down quickly when speech starts)
+ * and slower release (bring music back gently after speech ends).
  *
  * @param time Current time in seconds.
  * @param mask Pre-computed narration mask from buildNarrationMask().
@@ -176,10 +181,20 @@ export function applyDucking(
   mask: Array<{ start: number; end: number }>,
   config: DuckingConfig = {},
 ): number {
-  const c = { ...DEFAULT_DUCKING, ...config };
+  const speechVol = config.speechVolume ?? DEFAULT_DUCKING.speechVolume;
+  const silenceVol = config.silenceVolume ?? DEFAULT_DUCKING.silenceVolume;
+  const attack = config.attackSeconds ?? config.rampSeconds ?? DEFAULT_DUCKING.attackSeconds;
+  const release = config.releaseSeconds ?? config.rampSeconds ?? DEFAULT_DUCKING.releaseSeconds;
+
   const dist = distanceToSpeech(time, mask);
-  const t = Math.min(dist / c.rampSeconds, 1);
-  return c.speechVolume + t * (c.silenceVolume - c.speechVolume);
+  if (dist === 0) return speechVol; // Inside speech — fully ducked
+
+  // Determine if we're approaching speech (pre-speech) or leaving it (post-speech)
+  // by checking if the nearest speech interval is ahead or behind
+  const isPreSpeech = mask.length > 0 && mask.some(iv => iv.start > time && iv.start - time <= dist + 0.01);
+  const ramp = isPreSpeech ? attack : release;
+  const t = Math.min(dist / ramp, 1);
+  return speechVol + t * (silenceVol - speechVol);
 }
 
 // ── Crossfade ──────────────────────────────────────────────────────────────
@@ -353,8 +368,8 @@ export interface StemDuckingConfig {
 }
 
 const DEFAULT_STEM_DUCKING: Required<StemDuckingConfig> = {
-  bass:        { speechVolume: 0.15, silenceVolume: 0.35 },
-  drums:       { speechVolume: 0.20, silenceVolume: 0.30 },
+  bass:        { speechVolume: 0.10, silenceVolume: 0.35 },
+  drums:       { speechVolume: 0.08, silenceVolume: 0.30 },
   instruments: { speechVolume: 0.05, silenceVolume: 0.40 },
 };
 
