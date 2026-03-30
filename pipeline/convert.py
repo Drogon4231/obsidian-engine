@@ -119,7 +119,11 @@ def run_convert(manifest, audio_data, topic="", era=""):
         if not ambient_file:
             try:
                 from scripts.setup_ambience import get_ambient_file
-                ambient_file = get_ambient_file(scene.get("mood", "dark")) or None
+                ambient_file = get_ambient_file(
+                    scene.get("mood", "dark"),
+                    location=scene.get("location", ""),
+                    visual_desc=scene.get("visual_description", ""),
+                ) or None
             except Exception:
                 pass
 

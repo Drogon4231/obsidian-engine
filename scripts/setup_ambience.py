@@ -94,6 +94,11 @@ def run():
         if download(mood, info):
             ok += 1
         time.sleep(0.5)
+    # Download architectural ambient tracks
+    for arch_key, info in ARCHITECTURE_TRACKS.items():
+        if download(arch_key, info):
+            ok += 1
+        time.sleep(0.5)
 
     # Write attribution
     attr_path = AMBIENCE_DIR / "ATTRIBUTION.txt"
@@ -109,9 +114,57 @@ def run():
     return ok > 0
 
 
+# ── Architectural / Location Ambient Tracks ──────────────────────────────────
+# Override mood-based ambient when the scene has specific location context.
+# These create period-accurate spatial atmosphere.
+
+ARCHITECTURE_TRACKS = {
+    "stone_interior": {
+        "file": "amb_stone_chamber.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/12/22/audio_0eede79f2e.mp3",
+        "desc": "Stone chamber reverb with distant echoes",
+        "keywords": ["palace", "chamber", "throne", "temple", "court", "hall", "dungeon", "crypt",
+                      "monastery", "cathedral", "fortress", "castle", "citadel", "tower"],
+    },
+    "outdoor_marketplace": {
+        "file": "amb_marketplace.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/10/21/audio_be4f3f54f0.mp3",
+        "desc": "Outdoor marketplace crowd murmur",
+        "keywords": ["market", "bazaar", "agora", "forum", "square", "street", "village", "town"],
+    },
+    "nature_wind": {
+        "file": "amb_open_wind.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/05/31/audio_06cc5b5c3e.mp3",
+        "desc": "Open field wind with distant birds",
+        "keywords": ["field", "plain", "desert", "mountain", "river", "coast", "sea", "ocean",
+                      "forest", "jungle", "garden", "valley", "steppe", "savanna"],
+    },
+    "military_camp": {
+        "file": "amb_military.mp3",
+        "url": "https://cdn.pixabay.com/audio/2022/01/18/audio_98ccf14d31.mp3",
+        "desc": "Distant military camp — horses, metal, murmur",
+        "keywords": ["army", "military", "camp", "siege", "battle", "war", "legion",
+                      "troops", "soldiers", "barracks", "march"],
+    },
+}
+
+
 # Mood -> filename mapping for use by run_pipeline.py
-def get_ambient_file(mood: str) -> str:
-    """Return the ambient filename for a mood, or empty string if not available."""
+def get_ambient_file(mood: str, location: str = "", visual_desc: str = "") -> str:
+    """Return the ambient filename for a scene, preferring location-based over mood-based.
+
+    Priority: architectural match (from location/visual_desc keywords) → mood fallback.
+    """
+    # Try architectural match first
+    if location or visual_desc:
+        search_text = (location + " " + visual_desc).lower()
+        for arch_key, info in ARCHITECTURE_TRACKS.items():
+            if any(kw in search_text for kw in info["keywords"]):
+                path = AMBIENCE_DIR / info["file"]
+                if path.exists():
+                    return f"ambience/{info['file']}"
+
+    # Fallback to mood-based
     info = AMBIENT_TRACKS.get(mood, AMBIENT_TRACKS.get("dark"))
     if info:
         path = AMBIENCE_DIR / info["file"]

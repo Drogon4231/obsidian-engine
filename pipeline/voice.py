@@ -127,6 +127,19 @@ def _get_scene_voice_settings(scene, scene_idx, total_scenes):
         vs["style"] = max(0.15, vs["style"] + _arc_override("voice.modifier.breathing.style_delta", -0.20))
         spd = max(0.65, spd + _arc_override("voice.modifier.breathing.speed_delta", -0.12))
 
+    # Speech intensity from intent system — modulates delivery dynamics
+    speech_intensity = scene.get("intent_speech_intensity", 0.5)
+    if speech_intensity >= 0.85:
+        # High intensity (climax, reveal): lower stability for more expression
+        vs["stability"] = max(0.18, vs["stability"] - 0.06)
+        vs["style"] = min(1.0, vs["style"] + 0.10)
+        vs["similarity_boost"] = max(0.72, vs["similarity_boost"] - 0.08)
+    elif speech_intensity <= 0.3:
+        # Low intensity (whisper, silence): higher stability, lower speed
+        vs["stability"] = min(0.60, vs["stability"] + 0.08)
+        vs["style"] = max(0.20, vs["style"] - 0.10)
+        spd = max(0.65, spd - 0.06)
+
     # Quoted speech detection: switch to secondary voice
     # Only override voice ID and speed base — preserve mood-based stability/style
     quotes = re.findall(r'["\u201c]([^"\u201d]{10,200})["\u201d]', narration)
