@@ -90,7 +90,7 @@ def get_retention_danger_zones() -> list:
         return [0.05, 0.25, 0.50, 0.75]
 
 
-def run(script_data):
+def run(script_data, verification_data=None):
     full_script = script_data.get("full_script", "")
     topic = script_data.get("topic", "")
     word_count = len(full_script.split())
@@ -162,6 +162,11 @@ For each scene output:
   * text_overlay_dark: for devastating quotes or statistics that should be read on screen
   * standard: default cinematic shot
 - is_breathing_room: boolean — true for exactly 1-2 scenes that should have no narration overlay, just held image and music. Place these right AFTER major revelations to let the weight land. The narration text for these scenes should be very short (5-8 words) or a single powerful sentence.
+- claim_confidence: "established" | "contested" | "speculative" | null — if this scene makes a historical claim:
+  * "established": widely accepted by scholars with strong evidence
+  * "contested": actively debated among historians, multiple interpretations exist
+  * "speculative": the script is inferring or connecting dots without direct evidence
+  * null: no specific historical claim in this scene (transitional, atmospheric)
 
 CRITICAL: visual_description should paint a SPECIFIC historical moment, not abstract concepts.
 BAD: "dark scene showing tension"
@@ -169,12 +174,28 @@ GOOD: "Emperor Claudius slumped at a marble banquet table, face ashen, golden ch
 {retention_instruction}{cq_scene_intel}
 Output ONLY a JSON array of scene objects. No preamble."""
 
+    # Build verification context for claim confidence tagging
+    verification_ctx = ""
+    if verification_data:
+        claims = verification_data.get("verified_claims", [])
+        if claims:
+            disputed = [c for c in claims if c.get("verdict") in ("DISPUTED", "UNVERIFIED")]
+            speculative = [c for c in claims if c.get("confidence") == "LOW"]
+            if disputed or speculative:
+                verification_ctx = "\n\nCLAIM CONFIDENCE GUIDANCE (from fact verification):\n"
+                for c in disputed:
+                    verification_ctx += f"- CONTESTED: \"{c.get('claim', '')[:100]}\" — {c.get('notes', '')[:80]}\n"
+                for c in speculative:
+                    if c not in disputed:
+                        verification_ctx += f"- SPECULATIVE: \"{c.get('claim', '')[:100]}\" — low confidence\n"
+                verification_ctx += "Tag scenes containing these claims with the appropriate claim_confidence.\n"
+
     prompt = f"""Break this documentary script into exactly {target_scenes} scenes.
 Topic: {topic}
 
 Script:
 {full_script}
-
+{verification_ctx}
 Return a JSON array of exactly {target_scenes} scene objects."""
 
     result = call_agent(

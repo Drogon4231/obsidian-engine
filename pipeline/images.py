@@ -18,6 +18,59 @@ from core.shutdown import _shutdown_event
 logger = get_logger(__name__)
 
 
+def _apply_color_harmonization(scenes: list, palette: list[str]):
+    """Apply subtle color grade to all generated images using the visual bible palette.
+
+    Computes the average color temperature of the palette and applies a gentle
+    tint shift to each image to create visual cohesion across the video.
+    Only processes images that exist on disk.
+    """
+    try:
+        from PIL import Image, ImageEnhance
+    except ImportError:
+        logger.info("[Images] Pillow not available — skipping color harmonization")
+        return
+
+    # Parse palette hex colors to RGB
+    palette_rgb = []
+    for hex_color in palette[:4]:
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) == 6:
+            palette_rgb.append(tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)))
+    if not palette_rgb:
+        return
+
+    # Compute average palette color (the "target temperature")
+    avg_r = sum(c[0] for c in palette_rgb) / len(palette_rgb)
+    avg_g = sum(c[1] for c in palette_rgb) / len(palette_rgb)
+    avg_b = sum(c[2] for c in palette_rgb) / len(palette_rgb)
+
+    # Determine warmth/coolness shift (subtle — 5% blend)
+    blend_factor = 0.05
+
+    harmonized = 0
+    for scene in scenes:
+        img_path = scene.get("ai_image")
+        if not img_path or not Path(img_path).exists():
+            continue
+        try:
+            img = Image.open(img_path).convert("RGB")
+            # Create a solid color overlay at the palette average
+            overlay = Image.new("RGB", img.size, (int(avg_r), int(avg_g), int(avg_b)))
+            # Blend very subtly (5%) to tint toward palette
+            harmonized_img = Image.blend(img, overlay, blend_factor)
+            # Slight contrast boost to counteract the flattening from blend
+            enhancer = ImageEnhance.Contrast(harmonized_img)
+            harmonized_img = enhancer.enhance(1.03)
+            harmonized_img.save(img_path, "JPEG", quality=92)
+            harmonized += 1
+        except Exception:
+            pass  # Non-fatal — skip individual image failures
+
+    if harmonized > 0:
+        logger.info(f"[Images] Color harmonization: {harmonized} images tinted toward palette")
+
+
 def _fal_subscribe_with_retry(model: str, arguments: dict, label: str = "fal.ai",
                                max_attempts: int = 5, backoff_base: int = 2):
     """Call fal_client.subscribe with exponential-backoff retries.
@@ -431,6 +484,15 @@ def run_images(manifest):
 
     manifest["scenes"] = scenes
     logger.info(f"[Images] ✓ Generated {generated}/{len(scenes)} images")
+
+    # ── Color harmonization pass ─────────────────────────────────────────────
+    # Apply visual bible palette as a subtle color grade to unify all images.
+    # Uses PIL to shift color temperature toward the palette's dominant tone.
+    if visual_bible and visual_bible.get("color_palette"):
+        try:
+            _apply_color_harmonization(scenes, visual_bible["color_palette"])
+        except Exception as ch_err:
+            logger.warning(f"[Images] Color harmonization skipped: {ch_err}")
 
     # Abort if more than 50% of scenes have no AI image
     total_scenes = len(scenes)

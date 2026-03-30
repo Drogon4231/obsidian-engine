@@ -271,7 +271,7 @@ def _run_wave1(ctx: PipelineContext, runner: StageRunner) -> None:
     logger.info("\n[Pipeline] \u2500\u2500 Parallel DAG Wave 1: SEO + Scenes + Compliance \u2500\u2500")
     with ThreadPoolExecutor(max_workers=3, thread_name_prefix="dag_w1") as dag_pool:
         seo_future = dag_pool.submit(runner.run_stage, 6, "SEO", a06.run, ctx.script, ctx.verification, ctx.angle)
-        scenes_future = dag_pool.submit(runner.run_stage, 7, "Scene Breakdown", a07.run, ctx.script)
+        scenes_future = dag_pool.submit(runner.run_stage, 7, "Scene Breakdown", a07.run, ctx.script, ctx.verification)
         compliance_future = dag_pool.submit(_run_compliance, ctx, runner)
 
         ctx.seo = seo_future.result()

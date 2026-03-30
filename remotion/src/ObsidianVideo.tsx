@@ -43,6 +43,7 @@ interface Scene {
   intent_scene_energy?: number;
   intent_speech_intensity?: number;
   intent_silence_beat?: boolean;
+  claim_confidence?: 'established' | 'contested' | 'speculative' | null;
   is_synthetic?: boolean;
   film_grain_intensity?: number;
   vignette_intensity?: number;
