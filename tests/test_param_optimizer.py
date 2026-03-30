@@ -503,3 +503,48 @@ class TestGoldenOutput:
 
         assert r1.diagnostics["avg_loss"] == r2.diagnostics["avg_loss"]
         assert len(r1.proposals) == len(r2.proposals)
+
+
+# ── Schema-Dataclass Sync Tests (War Room v2) ──────────────────────────────
+
+class TestSchemaDataclassSync:
+    """Verify dataclass field names match their access patterns in analytics agent.
+    Catches the class of bugs where a field is renamed in the dataclass but
+    callers still reference the old name (silently caught by except Exception)."""
+
+    def test_optimizer_state_fresh_takes_no_args(self):
+        """OptimizerState.fresh() must accept zero arguments."""
+        state = OptimizerState.fresh()
+        assert state.epoch == 0
+
+    def test_observation_record_requires_published_at(self):
+        """ObservationRecord must require published_at — omitting it is a TypeError."""
+        with pytest.raises(TypeError):
+            ObservationRecord(
+                video_id="v1",
+                youtube_id="yt1",
+                params={"p": 1.0},
+                metrics=PerformanceMetrics(0, 0, 0, 0, 0),
+                era="test",
+                render_compliance=0.9,
+                # published_at intentionally omitted
+            )
+
+    def test_optimization_result_has_updated_state(self):
+        """OptimizationResult must use 'updated_state', not 'state'."""
+        from core.param_optimizer import OptimizationResult
+        fields = {f.name for f in OptimizationResult.__dataclass_fields__.values()}
+        assert "updated_state" in fields
+        assert "state" not in fields
+
+    def test_narrative_function_enum_matches_scene_intent(self):
+        """SCENE_BREAKDOWN_SCHEMA narrative_function enum must match _FUNCTION_MODIFIERS."""
+        from core.structured_schemas import SCENE_BREAKDOWN_SCHEMA
+        from media.scene_intent import _FUNCTION_MODIFIERS
+        schema_items = SCENE_BREAKDOWN_SCHEMA["properties"]["scenes"]["items"]
+        schema_enum = set(schema_items["properties"]["narrative_function"]["enum"])
+        intent_keys = set(_FUNCTION_MODIFIERS.keys())
+        assert schema_enum == intent_keys, (
+            f"Schema has {schema_enum - intent_keys} extra, "
+            f"missing {intent_keys - schema_enum}"
+        )

@@ -2506,6 +2506,7 @@ def run() -> dict:
                             ),
                             era=obs.get("era", "unknown"),
                             render_compliance=obs.get("render_compliance"),
+                            published_at=obs.get("published_at", ""),
                         ))
 
                     if len(obs_records) >= 5:
@@ -2516,7 +2517,7 @@ def run() -> dict:
                         if state_dict:
                             opt_state = OptimizerState.from_dict(state_dict)
                         else:
-                            opt_state = OptimizerState.fresh(list(current_params.keys()))
+                            opt_state = OptimizerState.fresh()
 
                         # Determine confidence from data quality
                         dq = insights.get("data_quality", {})
@@ -2554,11 +2555,11 @@ def run() -> dict:
                             print(f"[Analytics] Optimizer: {len(pending_approval)} proposals pending approval")
 
                         # Save updated state
-                        save_optimizer_state(result.state)
+                        save_optimizer_state(result.updated_state)
 
                         # Log cycle
                         log_optimizer_cycle({
-                            "epoch": result.state.epoch,
+                            "epoch": result.updated_state.epoch,
                             "observations_used": len(obs_records),
                             "confidence_level": confidence,
                             "proposals": [{"param": p.param_key, "delta": p.delta} for p in result.proposals],
@@ -2569,17 +2570,33 @@ def run() -> dict:
                         })
 
                         insights["optimizer"] = {
-                            "epoch": result.state.epoch,
+                            "epoch": result.updated_state.epoch,
                             "proposals_count": len(result.proposals),
                             "auto_applied_count": len(auto_applied),
                             "rollback_triggered": result.rollback_triggered,
-                            "exploration_rate": result.state.exploration_rate,
+                            "exploration_rate": result.diagnostics.get("exploration_rate", 0.0),
                         }
-                        print(f"[Analytics] ✓ Optimizer epoch {result.state.epoch}")
+                        print(f"[Analytics] ✓ Optimizer epoch {result.updated_state.epoch}")
+
+                        # Reset failure counter on success
+                        if not hasattr(run, "_optimizer_fail_count"):
+                            run._optimizer_fail_count = 0
+                        run._optimizer_fail_count = 0
                 else:
                     print(f"[Analytics] Optimizer: {len(observations or [])} observations (need 5+)")
             except Exception as opt_err:
-                print(f"[Analytics] Optimizer cycle warning: {opt_err}")
+                if not hasattr(run, "_optimizer_fail_count"):
+                    run._optimizer_fail_count = 0
+                run._optimizer_fail_count += 1
+                print(f"[Analytics] Optimizer cycle warning ({run._optimizer_fail_count} consecutive): {opt_err}")
+                if run._optimizer_fail_count >= 3:
+                    print("[Analytics] ALERT: Optimizer has failed 3+ consecutive cycles")
+                    try:
+                        from server.notify import _tg
+                        _tg("OPTIMIZER ALERT: 3+ consecutive failures. "
+                            f"Latest error: {opt_err}. Check analytics agent logs.")
+                    except Exception:
+                        pass
     except Exception as ph_err:
         print(f"[Analytics] Param history unavailable: {ph_err}")
 

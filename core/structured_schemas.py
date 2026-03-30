@@ -272,6 +272,17 @@ SCENE_BREAKDOWN_SCHEMA = {
                         ],
                     },
                     "is_breathing_room": {"type": "boolean"},
+                    "narrative_function": {
+                        "type": "string",
+                        "enum": [
+                            "cold_open", "hook", "setup", "exposition",
+                            "rising_action", "complication", "question",
+                            "answer", "escalation", "climax",
+                            "twist", "reveal", "falling_action",
+                            "breathing_room", "reflection", "resolution",
+                            "conclusion", "coda", "callback", "silence",
+                        ],
+                    },
                 },
                 "required": [
                     "scene_id", "narration", "duration_seconds",
@@ -281,6 +292,7 @@ SCENE_BREAKDOWN_SCHEMA = {
                     "show_map", "show_timeline", "lower_third",
                     "key_text", "key_text_type", "retention_hook",
                     "visual_treatment", "is_breathing_room",
+                    "narrative_function",
                 ],
                 "additionalProperties": False,
             },

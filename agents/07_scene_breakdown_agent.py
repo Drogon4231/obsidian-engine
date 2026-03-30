@@ -171,6 +171,27 @@ For each scene output:
   * text_overlay_dark: for devastating quotes or statistics that should be read on screen
   * standard: default cinematic shot
 - is_breathing_room: boolean — true for exactly 1-2 scenes that should have no narration overlay, just held image and music. Place these right AFTER major revelations to let the weight land. The narration text for these scenes should be very short (5-8 words) or a single powerful sentence.
+- narrative_function: the dramatic purpose of this scene in the story arc. MUST vary across scenes — do NOT assign the same function to more than 2 consecutive scenes. Choose from:
+  * "cold_open": opening sensory moment — drop viewer into action, no context
+  * "hook": stakes escalation — why they cannot stop watching
+  * "setup": world-building, establishing time/place/characters
+  * "exposition": delivering necessary context or background
+  * "rising_action": building tension, momentum increasing
+  * "complication": introducing an obstacle, contradiction, or new problem
+  * "question": posing a mystery the viewer needs answered
+  * "answer": delivering the payoff to a question
+  * "escalation": intensifying stakes beyond initial expectations
+  * "climax": peak intensity — the moment everything converges
+  * "twist": unexpected reversal that reframes everything prior
+  * "reveal": unveiling suppressed/hidden information
+  * "falling_action": decelerating after climax
+  * "breathing_room": contemplative pause — let weight land
+  * "reflection": narrator steps back to assess meaning
+  * "resolution": tying threads together
+  * "conclusion": final synthesis
+  * "coda": lingering final thought
+  * "callback": referencing an earlier moment with new meaning
+  * "silence": near-silent beat for emotional impact
 - claim_confidence: "established" | "contested" | "speculative" | null — if this scene makes a historical claim:
   * "established": widely accepted by scholars with strong evidence
   * "contested": actively debated among historians, multiple interpretations exist
@@ -271,6 +292,7 @@ Return a JSON array of exactly {target_scenes} scene objects."""
         scene.setdefault("retention_hook", None)
         scene.setdefault("visual_treatment", "standard")
         scene.setdefault("is_breathing_room", False)
+        scene.setdefault("narrative_function", "exposition")
         scene.setdefault("claim_confidence", None)
 
     # Post-process: flag scenes at danger zones that lack retention hooks

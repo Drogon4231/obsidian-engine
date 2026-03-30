@@ -219,8 +219,8 @@ def _attempt_recovery(agent_name: str, stage_num: int | None,
         result = pipeline_doctor.intervene(
             stage_num or -1,
             agent_name,
-            lambda: fn(*args, **kwargs),
-            (),
+            fn,
+            args,
             error,
             recent_logs=[],
         )
