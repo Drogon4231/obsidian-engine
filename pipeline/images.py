@@ -69,7 +69,7 @@ def _score_image(image_path) -> int:
 
 def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                            mood_light, style_recraft, style_flux,
-                           character_portraits=None):
+                           character_portraits=None, visual_bible=None):
     """Generate + quality-score one scene image. Thread-safe: unique file path per scene.
 
     Returns (idx, updated_scene, success).
@@ -109,22 +109,62 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
         if location:
             era_context += f"in {location}, "
 
+        # Inject character descriptions from visual bible (not just for fallback)
+        vb = visual_bible or {}
+        char_descs = vb.get("character_descriptions", {})
         characters = scene.get("characters_mentioned", [])
         char_desc = ""
-        if characters and not visual_desc:
+        for c in characters[:2]:
+            if c in char_descs:
+                char_desc += f"{char_descs[c]}, "
+                break
+        if not char_desc and characters and not visual_desc:
             char_desc = f"depicting {', '.join(characters[:2])}, period-accurate clothing and appearance, "
 
-        position = scene.get("narrative_position", "")
+        # Use visual_treatment from 07b instead of recalculating from narrative_position
+        visual_treatment = scene.get("visual_treatment", "standard")
         composition_hint = ""
-        if position == "hook":
-            composition_hint = "extreme close-up on a face frozen in a pivotal moment, "
-        elif position == "act3" or scene.get("is_reveal_moment"):
-            composition_hint = "wide dramatic reveal shot, figures dwarfed by grand architecture or landscape, "
-        elif position == "ending":
-            composition_hint = "solitary figure silhouetted against vast empty space, melancholic distance, "
+        if visual_treatment == "close_portrait":
+            composition_hint = "intimate close-up portrait, face fills 60% of frame, "
+        elif visual_treatment == "wide_establishing":
+            composition_hint = "wide establishing shot, vast scale, figures small against grand architecture, "
+        elif visual_treatment == "artifact_detail":
+            composition_hint = "extreme close-up on artifact or document, raking side-light revealing texture, "
+        elif visual_treatment == "map_overhead":
+            composition_hint = "overhead map view, geographic perspective, "
+        elif visual_treatment == "text_overlay_dark":
+            composition_hint = "dark minimal frame with space for text overlay, "
+        else:
+            # Fallback to narrative_position for "standard" treatment
+            position = scene.get("narrative_position", "")
+            if position == "hook":
+                composition_hint = "extreme close-up on a face frozen in a pivotal moment, "
+            elif position == "act3" or scene.get("is_reveal_moment"):
+                composition_hint = "wide dramatic reveal shot, figures dwarfed by grand architecture or landscape, "
+            elif position == "ending":
+                composition_hint = "solitary figure silhouetted against vast empty space, melancholic distance, "
 
-        cur_style = style_recraft if image_model == "recraft" else style_flux
+        # Use visual bible art_style instead of hardcoded STYLE_FLUX/STYLE_RECRAFT
+        bible_art_style = vb.get("art_style", "")
+        if bible_art_style:
+            cur_style = f"{bible_art_style}, no text, no watermarks, no modern elements"
+        else:
+            cur_style = style_recraft if image_model == "recraft" else style_flux
+
+        # Inject color palette hints from visual bible
+        palette_hint = ""
+        palette = vb.get("color_palette", [])
+        if palette:
+            palette_hint = f"color palette: {', '.join(palette[:3])}, "
+
+        # Inject recurring motif for tense/dark/dramatic scenes
+        motif_hint = ""
+        motifs = vb.get("recurring_motifs", [])
+        if motifs and mood in ("tense", "dark", "dramatic", "cold"):
+            motif_hint = f"subtle recurring motif: {motifs[0]}, "
+
         prompt = (f"{subject}, {era_context}{char_desc}{composition_hint}"
+                  f"{palette_hint}{motif_hint}"
                   f"{mood_light.get(mood, 'deep shadows')}, {cur_style}")
 
         logger.info(f"  [{_thread}] Scene {idx+1}/{total_scenes} ({mood})...")
@@ -151,7 +191,7 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                                     ref_b64 = base64.b64encode(_pf.read()).decode()
                                 kontext_prompt = (
                                     f"Transform this into: {subject}, {era_context}{composition_hint}"
-                                    f"{mood_light.get(mood, 'deep shadows')}. "
+                                    f"{palette_hint}{mood_light.get(mood, 'deep shadows')}. "
                                     f"Keep the character's face, build, and clothing identical. {cur_style}"
                                 )
                                 result = _fal_subscribe_with_retry("fal-ai/flux-pro/kontext", {
@@ -370,7 +410,7 @@ def run_images(manifest):
                 fut = pool.submit(
                     _generate_single_image, idx, scene, len(scenes),
                     ASSETS_DIR, IMAGE_MODEL, MOOD_LIGHT, STYLE_RECRAFT, STYLE_FLUX,
-                    character_portraits,
+                    character_portraits, visual_bible,
                 )
                 futures[fut] = idx
 
