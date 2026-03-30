@@ -55,6 +55,7 @@ interface EndscreenRecommended {
 }
 interface AudioConfig {
   ducking?: { speechVolume?: number; silenceVolume?: number; attackSeconds?: number; releaseSeconds?: number; rampSeconds?: number };
+  crossfadeStartPct?: number;
   actMultipliers?: { act1?: number; act2?: number; act3?: number; ending?: number };
   stemDucking?: {
     bass?: { speechVolume?: number; silenceVolume?: number };

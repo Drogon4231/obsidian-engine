@@ -219,12 +219,14 @@ def get_agent_guidance(agent_key: str) -> str:
             get_seo_intelligence,
             get_narrative_intelligence,
             get_script_intelligence,
+            get_scene_retention_intelligence,
         )
         mapping = {
             "agent_00": get_topic_discovery_intelligence,
             "agent_03": get_narrative_intelligence,
             "agent_04": get_script_intelligence,
             "agent_06": get_seo_intelligence,
+            "agent_07": get_scene_retention_intelligence,
         }
         fn = mapping.get(agent_key)
         if fn:
