@@ -247,6 +247,11 @@ def _save_to_supabase(ctx: PipelineContext) -> None:
             seo_data = ctx.seo or ctx.state.get("stage_6", {}) or {}
             audio_saved = ctx.audio_data or ctx.state.get("stage_8", {}) or {}
             script_saved = ctx.script or ctx.state.get("stage_4", {}) or {}
+            # Extract scene manifest from convert stage output for analytics
+            convert_data = ctx.state.get("stage_11", {})
+            scene_manifest = None
+            if isinstance(convert_data, dict):
+                scene_manifest = convert_data.get("scene_manifest")
             supabase_client.save_video(
                 topic=ctx.topic,
                 title=seo_data.get("recommended_title", ctx.topic),
@@ -257,6 +262,7 @@ def _save_to_supabase(ctx: PipelineContext) -> None:
                 duration_seconds=audio_saved.get("total_duration_seconds", 0),
                 word_count=script_saved.get("word_count", 0) or len(script_saved.get("full_script", "").split()),
                 pipeline_state=ctx.state,
+                scene_manifest=scene_manifest,
             )
         except Exception as e:
             logger.warning(f"[Pipeline] could not save video to Supabase: {e}")

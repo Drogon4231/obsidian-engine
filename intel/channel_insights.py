@@ -1117,6 +1117,52 @@ def get_music_intelligence() -> str:
         return ""
 
 
+def get_scene_retention_intelligence() -> str:
+    """Data-backed per-scene retention insights from scene manifest correlation.
+
+    Tells agents which scene types, moods, and narrative functions retain
+    viewers best. Injected into scene breakdown and script agents.
+    """
+    try:
+        insights = load_insights()
+        corr = insights.get("scene_retention_correlation", {})
+        if not corr:
+            return ""
+
+        lines = ["SCENE RETENTION INTELLIGENCE (data-backed):"]
+
+        # Silence beat effect
+        sb = corr.get("silence_beat_effect", {})
+        if sb.get("sample_with", 0) >= 3:
+            delta = sb["avg_drop_without"] - sb["avg_drop_with"]
+            if abs(delta) > 0.3:
+                direction = "LESS" if delta > 0 else "MORE"
+                lines.append(f"  Silence beats: {abs(delta):.1f}% {direction} drop than non-silence scenes ({sb['sample_with']} samples)")
+
+        # Best/worst moods
+        mood_ret = corr.get("mood_retention", {})
+        if len(mood_ret) >= 3:
+            sorted_moods = sorted(mood_ret.items(), key=lambda x: x[1].get("avg_drop", 99))
+            best = sorted_moods[0]
+            worst = sorted_moods[-1]
+            if best[1].get("sample", 0) >= 5:
+                lines.append(f"  Best-retaining mood: {best[0]} ({best[1]['avg_drop']:.1f}% avg drop, {best[1]['sample']} scenes)")
+            if worst[1].get("sample", 0) >= 5:
+                lines.append(f"  Worst-retaining mood: {worst[0]} ({worst[1]['avg_drop']:.1f}% avg drop, {worst[1]['sample']} scenes)")
+
+        # Best/worst narrative functions
+        fn_ret = corr.get("function_retention", {})
+        if len(fn_ret) >= 3:
+            sorted_fns = sorted(fn_ret.items(), key=lambda x: x[1].get("avg_drop", 99))
+            best = sorted_fns[0]
+            if best[1].get("sample", 0) >= 3:
+                lines.append(f"  Best-retaining function: {best[0]} ({best[1]['avg_drop']:.1f}% avg drop)")
+
+        return "\n".join(lines) if len(lines) > 1 else ""
+    except Exception:
+        return ""
+
+
 # ── Content pattern helpers (used by multiple functions) ──────────────────────
 
 def _get_content_pattern_summary(insights: dict) -> str:

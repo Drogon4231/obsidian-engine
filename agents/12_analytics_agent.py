@@ -568,6 +568,95 @@ def _compute_retention_aggregate(all_retention: list) -> dict:
     }
 
 
+def _compute_scene_retention_correlation(video_rows: list) -> dict:
+    """Correlate per-scene metadata against retention curve drop rates.
+
+    For each video that has BOTH a retention curve AND a scene manifest,
+    compute the retention delta (drop) per scene and group by scene attributes.
+    Returns aggregate correlations that tell the optimizer what works.
+    """
+    attribute_drops: dict[str, list[float]] = {
+        "silence_beat_true": [], "silence_beat_false": [],
+        "reveal_true": [], "reveal_false": [],
+        "breathing_room_true": [], "breathing_room_false": [],
+    }
+    mood_drops: dict[str, list[float]] = {}
+    function_drops: dict[str, list[float]] = {}
+    treatment_drops: dict[str, list[float]] = {}
+
+    for row in video_rows:
+        curve_data = row.get("retention_curve_data", {})
+        curve = curve_data.get("retention_curve", [])
+        manifest = row.get("scene_manifest")
+        if not curve or not manifest or len(curve) < 10:
+            continue
+
+        for sc in manifest:
+            start_pct = sc.get("start_pct", 0)
+            end_pct = sc.get("end_pct", 0)
+            if end_pct <= start_pct:
+                continue
+            # Map scene percentage positions to retention curve indices
+            start_idx = min(int(start_pct * len(curve)), len(curve) - 1)
+            end_idx = min(int(end_pct * len(curve)), len(curve) - 1)
+            if start_idx >= end_idx:
+                continue
+
+            ret_start = curve[start_idx]
+            ret_end = curve[end_idx]
+            drop = ret_start - ret_end  # positive = viewers left
+
+            # Group by attributes
+            mood = sc.get("mood", "dark")
+            mood_drops.setdefault(mood, []).append(drop)
+            fn = sc.get("narrative_function", "exposition")
+            function_drops.setdefault(fn, []).append(drop)
+            vt = sc.get("visual_treatment", "standard")
+            treatment_drops.setdefault(vt, []).append(drop)
+
+            if sc.get("intent_silence_beat"):
+                attribute_drops["silence_beat_true"].append(drop)
+            else:
+                attribute_drops["silence_beat_false"].append(drop)
+            if sc.get("is_reveal_moment"):
+                attribute_drops["reveal_true"].append(drop)
+            else:
+                attribute_drops["reveal_false"].append(drop)
+            if sc.get("is_breathing_room"):
+                attribute_drops["breathing_room_true"].append(drop)
+            else:
+                attribute_drops["breathing_room_false"].append(drop)
+
+    def _avg(lst):
+        return round(sum(lst) / len(lst), 2) if lst else 0.0
+
+    result = {
+        "silence_beat_effect": {
+            "avg_drop_with": _avg(attribute_drops["silence_beat_true"]),
+            "avg_drop_without": _avg(attribute_drops["silence_beat_false"]),
+            "sample_with": len(attribute_drops["silence_beat_true"]),
+            "sample_without": len(attribute_drops["silence_beat_false"]),
+        },
+        "reveal_effect": {
+            "avg_drop_with": _avg(attribute_drops["reveal_true"]),
+            "avg_drop_without": _avg(attribute_drops["reveal_false"]),
+            "sample_with": len(attribute_drops["reveal_true"]),
+        },
+        "breathing_room_effect": {
+            "avg_drop_with": _avg(attribute_drops["breathing_room_true"]),
+            "avg_drop_without": _avg(attribute_drops["breathing_room_false"]),
+            "sample_with": len(attribute_drops["breathing_room_true"]),
+        },
+        "mood_retention": {m: {"avg_drop": _avg(d), "sample": len(d)} for m, d in mood_drops.items()},
+        "function_retention": {f: {"avg_drop": _avg(d), "sample": len(d)} for f, d in function_drops.items()},
+        "treatment_retention": {t: {"avg_drop": _avg(d), "sample": len(d)} for t, d in treatment_drops.items()},
+    }
+    total_scenes = sum(len(v) for v in mood_drops.values())
+    if total_scenes > 0:
+        print(f"[Analytics] Scene-retention correlation: {total_scenes} scenes across {len(video_rows)} videos")
+    return result
+
+
 def _compute_top_search_terms(all_search: list, limit: int = 30) -> list:
     """Aggregate search terms across all videos, ranked by total views."""
     term_views: dict = {}
@@ -1784,7 +1873,7 @@ def run() -> dict:
 
     # 1. Fetch all uploaded videos
     videos_result = sb.table("videos").select(
-        "id, topic, title, youtube_id, duration_seconds, word_count, created_at, pipeline_state"
+        "id, topic, title, youtube_id, duration_seconds, word_count, created_at, pipeline_state, scene_manifest"
     ).order("created_at", desc=True).execute()
     videos = videos_result.data or []
 
@@ -1849,6 +1938,7 @@ def run() -> dict:
             "youtube_id":        youtube_id,
             "supabase_video_id": video.get("id"),
             "duration_seconds":  video.get("duration_seconds", 0),
+            "scene_manifest":    video.get("scene_manifest"),
             **stats_row,
         }
 
@@ -2079,6 +2169,14 @@ def run() -> dict:
                       f"end={retention_agg.get('avg_end_retention', 0):.1f}%")
         except Exception as e:
             print(f"[Analytics] Retention aggregate failed: {e}")
+
+        # Scene-level retention correlation (requires both retention curves + scene manifests)
+        try:
+            scene_corr = _compute_scene_retention_correlation(video_analytics_rows)
+            if scene_corr and scene_corr.get("mood_retention"):
+                insights["scene_retention_correlation"] = scene_corr
+        except Exception as e:
+            print(f"[Analytics] Scene-retention correlation failed: {e}")
 
         # Search intelligence — top terms across all videos
         try:

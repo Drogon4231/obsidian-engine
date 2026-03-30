@@ -480,6 +480,36 @@ def run_convert(manifest, audio_data, topic="", era=""):
     with open(vd_path, "w") as f:
         json.dump(video_data, f, indent=2)
 
+    # Build scene manifest for analytics (per-scene metadata for retention correlation)
+    scene_manifest = []
+    for i, sc in enumerate(remotion_scenes):
+        st = sc.get("start_time", 0) or 0
+        et = sc.get("end_time", 0) or 0
+        scene_manifest.append({
+            "scene_id": i,
+            "start_pct": round(st / total_duration, 4) if total_duration else 0,
+            "end_pct": round(et / total_duration, 4) if total_duration else 0,
+            "start_time": round(st, 2),
+            "end_time": round(et, 2),
+            "mood": sc.get("mood", "dark"),
+            "narrative_function": sc.get("narrative_function", "exposition"),
+            "narrative_position": sc.get("narrative_position", ""),
+            "is_reveal_moment": sc.get("is_reveal_moment", False),
+            "is_breathing_room": sc.get("is_breathing_room", False),
+            "intent_silence_beat": sc.get("intent_silence_beat", False),
+            "intent_scene_energy": sc.get("intent_scene_energy", 0.5),
+            "intent_speech_intensity": sc.get("intent_speech_intensity", 0.5),
+            "intent_music_volume_base": sc.get("intent_music_volume_base", 0.5),
+            "visual_treatment": sc.get("visual_treatment", "standard"),
+            "claim_confidence": sc.get("claim_confidence"),
+            "has_ai_image": bool(sc.get("ai_image")),
+            "has_sfx": bool(sc.get("sfx_file")),
+            "has_ambient": bool(sc.get("ambient_file")),
+            "word_count": len((sc.get("narration") or "").split()),
+            "characters_mentioned": sc.get("characters_mentioned", []),
+        })
+    video_data["scene_manifest"] = scene_manifest
+
     # Copy audio
     shutil.copy2(MEDIA_DIR / "narration.mp3", REMOTION_PUBLIC / "narration.mp3")
 

@@ -204,7 +204,8 @@ def mark_topic_status(topic_id, status):
     _with_retry(lambda: client.table("topics").update(update).eq("id", topic_id).execute())
 
 def save_video(topic, title, youtube_url, youtube_id, script_path,
-               video_path, duration_seconds, word_count, pipeline_state):
+               video_path, duration_seconds, word_count, pipeline_state,
+               scene_manifest=None):
     from datetime import datetime, timezone
     client = get_client()
     payload = {
@@ -215,6 +216,8 @@ def save_video(topic, title, youtube_url, youtube_id, script_path,
         "status": "uploaded", "pipeline_state": pipeline_state,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
+    if scene_manifest is not None:
+        payload["scene_manifest"] = scene_manifest
     # Upsert: update existing record if youtube_id already present, else insert
     if youtube_id:
         existing = client.table("videos").select("id").eq("youtube_id", youtube_id).limit(1).execute()
