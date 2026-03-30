@@ -15,7 +15,8 @@ DNA = get_dna(["identity", "voice", "story_structure", "content_strategy", "chan
 
 def extract_acts(text: str) -> dict:
     """Split script into acts by word proportion rather than character position.
-    Cold open is the first ~1% (1-2 sentences), hook is the next ~6%."""
+    Cold open is the first ~3% (1-2 disorienting sentences), hook is the next ~4%
+    (stakes escalation), then acts follow standard documentary structure."""
     words = text.split()
     n = len(words)
 
@@ -23,8 +24,8 @@ def extract_acts(text: str) -> dict:
         return " ".join(words[int(n * start_pct):int(n * end_pct)])
 
     return {
-        "cold_open": section(0.00, 0.015),
-        "hook":      section(0.015, 0.07),
+        "cold_open": section(0.00, 0.03),
+        "hook":      section(0.03, 0.07),
         "act1":      section(0.07, 0.28),
         "act2":      section(0.28, 0.67),
         "act3":      section(0.67, 0.90),
@@ -65,8 +66,18 @@ CRITICAL — FORMAT FOR DRAMATIC AI VOICEOVER:
 - Write HOW it should sound. If something is sinister, write it sinister.
 - Whisper-style lines: "No one knew." — just three words, devastating.
 - Build to chapter endings with escalating sentence rhythm
+STRUCTURE — Cold Open and Hook are two DISTINCT beats, not one:
+- COLD OPEN (first 1-2 sentences): Pure sensation. Something feels wrong. A fact that
+  disorients. DO NOT explain, name, or contextualize. The viewer should feel before they
+  understand. Example: "A text vanishes for a thousand years. When it resurfaces, the
+  author is already a ghost."
+- HOOK (next 3-5 sentences): Now name the stakes. Who, what, why it matters. This is
+  where curiosity becomes commitment. The mystery planted in the cold open gets its
+  first shape — but NOT its answer.
+- The cold open and hook MUST serve different functions. If both explain, the hook has
+  nowhere to go. If both mystify, the viewer has no anchor.
+
 Rules:
-- Begin with the COLD OPEN if provided — 1-2 devastating sentences before the hook
 - Present tense throughout
 - Match the hook register (TENSION, DREAD_THROUGH_BEAUTY, MYSTERY, or INTIMACY) — not always maximum action
 - Named characters only, exact dates and numbers

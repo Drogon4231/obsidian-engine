@@ -260,6 +260,12 @@ const SceneContent: React.FC<{
       <Letterbox/>
       <ChapterMarker chapter={chapterNum} total={totalChapters}/>
 
+      {/* ── Graphics Priority Ladder ──────────────────────────────────────── */}
+      {/* Silence beats: suppress ALL overlays for a clean dramatic frame.    */}
+      {/* Otherwise: max 2 concurrent overlays. Lower-third suppresses map.   */}
+      {/* key_text suppressed when lower_third is present.                    */}
+      {!scene.intent_silence_beat && (<>
+
       {/* Era stamp — only show if NO timeline bar (they overlap at top) */}
       {hasEraInfo && !scene.show_timeline && (
         <AbsoluteFill style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',paddingTop:100}}>
@@ -277,8 +283,8 @@ const SceneContent: React.FC<{
         />
       )}
 
-      {/* Motion graphics: Map animation (bottom-left, above captions) */}
-      {scene.show_map && scene.location && (
+      {/* Motion graphics: Map animation — suppressed when lower_third is active (same visual lane) */}
+      {scene.show_map && scene.location && !scene.lower_third && (
         <MapAnimation location={scene.location} year={scene.year || ''} duration={duration}/>
       )}
 
@@ -300,8 +306,10 @@ const SceneContent: React.FC<{
         />
       )}
 
-      {/* Captions — hidden during breathing room scenes for dramatic silence */}
-      {!scene.is_breathing_room && (
+      </>)}
+
+      {/* Captions — hidden during silence beats and breathing room for dramatic silence */}
+      {!scene.is_breathing_room && !scene.intent_silence_beat && (
         <Captions words={words} sceneStartTime={scene.start_time} captionStyle={scene.intent_caption_style ?? 'standard'}/>
       )}
 
@@ -645,8 +653,8 @@ export const ObsidianVideo: React.FC = () => {
               chapterNum={i+1}
               totalChapters={totalChapters}
             />
-            {/* Per-scene ambient sound layer — low volume atmosphere */}
-            {scene.ambient_file && (
+            {/* Per-scene ambient sound layer — suppressed during silence beats */}
+            {scene.ambient_file && !scene.intent_silence_beat && (
               <Audio
                 src={staticFile(scene.ambient_file)}
                 volume={(f) => {
@@ -657,8 +665,8 @@ export const ObsidianVideo: React.FC = () => {
                 loop
               />
             )}
-            {/* Per-scene SFX one-shot — plays once at scene start with quick fade-in/out */}
-            {scene.sfx_file && (
+            {/* Per-scene SFX one-shot — suppressed during silence beats */}
+            {scene.sfx_file && !scene.intent_silence_beat && (
               <Audio
                 src={staticFile(scene.sfx_file)}
                 startFrom={Math.round((scene.sfx_start_offset || 0) * fps)}
