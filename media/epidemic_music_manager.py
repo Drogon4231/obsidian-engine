@@ -109,7 +109,8 @@ def search_and_download_for_mood(mood: str, target_duration: float = 600,
         if prefer_no_vocals:
             search_kwargs["vocals"] = False
 
-        # Optional duration filter (±30% of target)
+        # Optional duration filter (±30% of target, in milliseconds)
+        # Multipliers combine ±30% range with seconds→ms: 0.7×1000=700, 1.3×1000=1300
         if target_duration > 0:
             search_kwargs["duration_min"] = int(target_duration * 700)
             search_kwargs["duration_max"] = int(target_duration * 1300)
