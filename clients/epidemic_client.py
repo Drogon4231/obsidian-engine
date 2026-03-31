@@ -33,39 +33,127 @@ class EpidemicSoundClient:
 
     MCP_ENDPOINT = "https://www.epidemicsound.com/a/mcp-service/mcp"
 
+    # MCP tool name mapping: old names → new server names
+    _TOOL_MAP = {
+        "search_music": "SearchRecordings",
+        "find_similar_track": "SearchSimilarToRecording",
+        "search_sound_effects": "SearchSoundEffects",
+        "find_similar_sound_effects": "SearchSimilarToSoundEffect",
+        "download_music_track": "DownloadRecording",
+        "download_sound_effect": "DownloadSoundEffect",
+        "browse_voice_artists": "ListVoices",
+        "generate_voiceover": "GenerateVoiceover",
+        "get_voiceover_status": "PollVoiceoverGenerationStatus",
+        "get_voiceover_details": "GetVoiceover",
+        "download_voiceover": "DownloadVoiceover",
+        "list_user_generated_voices": "ListUserGeneratedVoices",
+        "edit_recording": "EditRecording",
+        "poll_edit_recording": "PollEditRecordingJob",
+        "download_recording_edit": "DownloadRecordingEdit",
+    }
+
     def __init__(self, api_key: str | None = None):
         self._api_key = api_key or os.getenv("EPIDEMIC_SOUND_API_KEY", "")
         self._request_id = 0
+        self._session_id = None  # MCP session ID from initialize
+        self._session_headers = {}  # Headers with session ID
 
     # ── MCP Protocol Core ─────────────────────────────────────────────────────
 
+    def _parse_sse_response(self, response_text: str) -> dict:
+        """Parse Server-Sent Events (SSE) response to extract JSON-RPC data."""
+        import json as _json
+        for line in response_text.strip().split("\n"):
+            line = line.strip()
+            if line.startswith("data: "):
+                try:
+                    return _json.loads(line[6:])
+                except (ValueError, TypeError):
+                    continue
+        # Fallback: try parsing as plain JSON
+        try:
+            return _json.loads(response_text)
+        except (ValueError, TypeError):
+            return {}
+
+    def _ensure_session(self, timeout: int = 30) -> None:
+        """Initialize MCP session if not already established."""
+        import requests
+
+        if self._session_id:
+            return
+
+        if not self._api_key:
+            raise KeyExpiredError("EPIDEMIC_SOUND_API_KEY not set")
+
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+
+        # Step 1: Initialize
+        self._request_id += 1
+        init_payload = {
+            "jsonrpc": "2.0",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "obsidian-archive", "version": "1.0.0"},
+            },
+            "id": self._request_id,
+        }
+        r = requests.post(self.MCP_ENDPOINT, headers=headers, json=init_payload, timeout=timeout)
+        if r.status_code in (401, 403):
+            raise KeyExpiredError("Epidemic Sound API key expired or invalid")
+        r.raise_for_status()
+
+        self._parse_sse_response(r.text)  # validate response
+        self._session_id = r.headers.get("mcp-session-id", "")
+        # Store session ID in headers for all subsequent requests
+        self._session_headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": self._session_id,
+        }
+
+        # Step 2: Send initialized notification
+        requests.post(
+            self.MCP_ENDPOINT, headers=self._session_headers,
+            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+            timeout=timeout,
+        )
+        logger.info(f"[Epidemic] MCP session initialized (session: {self._session_id[:12]}...)")
+
     def _call_tool(self, tool_name: str, arguments: dict | None = None,
                    timeout: int = 30, max_retries: int = 3) -> dict:
-        """Call an MCP tool via JSON-RPC POST.
+        """Call an MCP tool via JSON-RPC POST with session support.
 
-        MCP protocol: POST to endpoint with
-        {"jsonrpc": "2.0", "method": "tools/call",
-         "params": {"name": tool_name, "arguments": arguments},
-         "id": request_id}
+        MCP protocol requires: initialize → notifications/initialized → tools/call
+        Server responds with SSE format (data: {...}).
         """
         import requests
 
         if not self._api_key:
             raise KeyExpiredError("EPIDEMIC_SOUND_API_KEY not set")
 
+        # Ensure session is initialized
+        self._ensure_session(timeout=timeout)
+
+        # Map old tool names to new server names
+        server_tool_name = self._TOOL_MAP.get(tool_name, tool_name)
+
         self._request_id += 1
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
             "params": {
-                "name": tool_name,
+                "name": server_tool_name,
                 "arguments": arguments or {},
             },
             "id": self._request_id,
-        }
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
         }
 
         last_err = None
@@ -73,7 +161,7 @@ class EpidemicSoundClient:
             try:
                 r = requests.post(
                     self.MCP_ENDPOINT,
-                    headers=headers,
+                    headers=self._session_headers,
                     json=payload,
                     timeout=timeout,
                 )
@@ -84,6 +172,12 @@ class EpidemicSoundClient:
                         "regenerate at epidemicsound.com/account/api-keys"
                     )
 
+                if r.status_code == 422:
+                    # Session expired — reinitialize
+                    self._session_id = None
+                    self._ensure_session(timeout=timeout)
+                    continue
+
                 if r.status_code == 429 or r.status_code >= 500:
                     wait = min(30, 2 ** attempt * 5)
                     logger.warning(f"[Epidemic] {r.status_code} on {tool_name}, retrying in {wait}s...")
@@ -91,7 +185,9 @@ class EpidemicSoundClient:
                     continue
 
                 r.raise_for_status()
-                resp = r.json() if r.text else {}
+
+                # Parse SSE response
+                resp = self._parse_sse_response(r.text)
 
                 # MCP JSON-RPC response: {"result": {...}} or {"error": {...}}
                 if "error" in resp:
@@ -177,9 +273,11 @@ class EpidemicSoundClient:
                      sort: str = "relevance",
                      limit: int = 10) -> list[dict]:
         """Search the music catalog via MCP search_music tool."""
-        args: dict = {"limit": limit, "sort": sort}
+        args: dict = {}
         if keyword:
-            args["term"] = keyword
+            args["searchTerm"] = keyword
+        if limit:
+            args["first"] = limit  # New API uses 'first' for pagination
         if bpm_min is not None:
             args["bpmMin"] = bpm_min
         if bpm_max is not None:
@@ -198,6 +296,11 @@ class EpidemicSoundClient:
             args["vocals"] = vocals
 
         data = self._call_tool("search_music", args)
+        # New API: data.recordings.nodes[].recording, Old API: tracks[]
+        inner = data.get("data") or {}
+        recs = (inner.get("recordings") or {}).get("nodes", [])
+        if recs:
+            return [node.get("recording", node) for node in recs]
         return data.get("recordings", data.get("results", data.get("tracks", [])))
 
     def find_similar(self, track_id: str, limit: int = 5) -> list[dict]:
@@ -219,13 +322,19 @@ class EpidemicSoundClient:
                    sort: str = "relevance",
                    limit: int = 10) -> list[dict]:
         """Search the sound effects catalog via MCP search_sound_effects tool."""
-        args: dict = {"term": keyword, "limit": limit, "sort": sort}
+        args: dict = {"searchTerm": keyword}
+        if limit:
+            args["first"] = limit
         if duration_max is not None:
             args["durationMax"] = int(duration_max * 1000)
         if tags:
             args["tags"] = tags
 
         data = self._call_tool("search_sound_effects", args)
+        # New API: data.soundEffects.nodes[].soundEffect
+        inner = (data.get("data") or {}).get("soundEffects", {}).get("nodes", [])
+        if inner:
+            return [node.get("soundEffect", node) for node in inner]
         return data.get("sound_effects", data.get("results", []))
 
     def find_similar_sfx(self, sfx_id: str, limit: int = 5) -> list[dict]:
@@ -245,33 +354,44 @@ class EpidemicSoundClient:
                     preference_regions: list[dict] | None = None,
                     required_regions: list[dict] | None = None,
                     skip_stems: bool = False) -> dict:
-        """Submit a track adaptation job via MCP edit_recording tool."""
-        args: dict = {
-            "recordingId": track_id,
-            "targetDuration": target_duration_ms,
+        """Submit a track adaptation job via MCP EditRecording tool."""
+        edit_input: dict = {
+            "targetDurationMs": target_duration_ms,
+            "downloadAudioFormat": "MP3",
             "forceDuration": force_duration,
             "loopable": loopable,
             "maxResults": max_results,
             "skipStems": skip_stems,
         }
         if preference_regions:
-            args["preferenceRegions"] = preference_regions
+            edit_input["preferenceRegions"] = preference_regions
         if required_regions:
-            args["requiredRegionsAtOffsets"] = required_regions
+            edit_input["requiredRegionsAtOffsets"] = required_regions
 
-        return self._call_tool("edit_recording", args, timeout=60)
+        data = self._call_tool("edit_recording", {
+            "id": track_id,
+            "input": edit_input,
+        }, timeout=60)
+        # New API: data.recordingEdit.{id, status}
+        inner = (data.get("data") or {}).get("recordingEdit", {})
+        return {"job_id": inner.get("id", ""), "status": inner.get("status", "")}
 
     def get_adaptation_status(self, job_id: str) -> dict:
         """Check adaptation job status."""
-        return self._call_tool("get_edit_status", {"jobId": job_id})
+        data = self._call_tool("poll_edit_recording", {"id": job_id})
+        inner = (data.get("data") or {}).get("recordingEditJob", data)
+        return inner
 
     def download_adapted_track(self, job_id: str, edit_id: str,
                                output_path: Path) -> Path:
         """Download an adapted track version."""
-        data = self._call_tool("download_edited_track", {
-            "jobId": job_id, "editId": edit_id,
+        data = self._call_tool("download_recording_edit", {
+            "input": {"recordingEditJobId": job_id},
         })
-        url = data.get("url", data.get("download_url", ""))
+        # New API: data.recordingEditDownload.assetUrl
+        url = ((data.get("data") or {}).get("recordingEditDownload") or {}).get("assetUrl", "")
+        if not url:
+            url = data.get("url", data.get("download_url", ""))
         if not url:
             raise RuntimeError(f"No download URL for adaptation {job_id}/{edit_id}")
         return self._download_file(url, output_path)
@@ -326,28 +446,36 @@ class EpidemicSoundClient:
     def download_track(self, track_id: str, output_path: Path, *,
                        stem: str | None = None,
                        format: str = "mp3") -> Path:
-        """Download a music track via MCP download_music_track tool."""
+        """Download a music track via MCP DownloadRecording tool."""
+        stem_type = (stem or "FULL").upper()
         args: dict = {
-            "recordingId": track_id,
-            "format": format.upper(),
+            "id": track_id,
+            "options": {
+                "fileType": format.upper(),
+                "stemType": stem_type,
+            },
         }
-        if stem:
-            args["stemType"] = stem.upper()
 
         data = self._call_tool("download_music_track", args)
-        url = data.get("url", data.get("download_url", ""))
+        # New API: data.recordingDownload.assetUrl
+        url = ((data.get("data") or {}).get("recordingDownload") or {}).get("assetUrl", "")
+        if not url:
+            url = data.get("url", data.get("download_url", ""))
         if not url:
             raise RuntimeError(f"No download URL for track {track_id}")
         return self._download_file(url, output_path)
 
     def download_sfx(self, sfx_id: str, output_path: Path, *,
                      format: str = "mp3") -> Path:
-        """Download a sound effect via MCP download_sound_effect tool."""
+        """Download a sound effect via MCP DownloadSoundEffect tool."""
         data = self._call_tool("download_sound_effect", {
-            "soundEffectId": sfx_id,
-            "format": format.upper(),
+            "id": sfx_id,
+            "options": {"fileType": format.upper()},
         })
-        url = data.get("url", data.get("download_url", ""))
+        # New API: data.soundEffectDownload.assetUrl
+        url = ((data.get("data") or {}).get("soundEffectDownload") or {}).get("assetUrl", "")
+        if not url:
+            url = data.get("url", data.get("download_url", ""))
         if not url:
             raise RuntimeError(f"No download URL for SFX {sfx_id}")
         return self._download_file(url, output_path)

@@ -133,13 +133,33 @@ def add_topic(topic, source="manual", score=0.5, metadata=None):
 
 def get_next_topic():
     """
-    Pick the highest-scored queued topic, but skip topics from the same era
-    as the last 2 published videos to keep variety on the channel.
+    Pick the next topic to produce. Priority order:
+    1. Series continuations (Part 2/3) whose parent Part 1 has been published
+    2. Highest-scored queued topic with era rotation
 
-    Uses claim_topic() for atomic claiming to prevent race conditions when
-    multiple instances try to pick the same topic.
+    Uses claim_topic() for atomic claiming to prevent race conditions.
     """
     client = get_client()
+
+    # Priority 1: Series continuations — Part 2/3 whose parent is already published
+    try:
+        series_parts = client.table("topics")\
+            .select("*").eq("status", "queued").eq("source", "series_auto")\
+            .order("created_at").limit(10).execute()
+        for part in (series_parts.data or []):
+            meta = part.get("metadata") or {}
+            parent_topic = meta.get("parent_topic", "")
+            if parent_topic:
+                parent = client.table("topics")\
+                    .select("status").eq("topic", parent_topic).limit(1).execute()
+                if parent.data and parent.data[0].get("status") == "done":
+                    if claim_topic(part["id"]):
+                        print(f"[Scheduler] Series continuation: Part {meta.get('series_part', '?')} of '{parent_topic[:60]}'")
+                        return part
+    except Exception as e:
+        print(f"[Scheduler] Series priority check failed (non-fatal): {e}")
+
+    # Priority 2: Highest-scored queued topic with era rotation
     result = client.table("topics")\
         .select("*").eq("status","queued")\
         .order("score", desc=True).order("created_at").limit(20).execute()

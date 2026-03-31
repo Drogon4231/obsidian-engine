@@ -1578,7 +1578,8 @@ def run_tier2_content(video_path: str, script_data: dict, scenes_data: dict) -> 
     for i, scene in enumerate(scene_list):
         has_narration = bool(scene.get("narration", "").strip())
         has_visual = bool(
-            scene.get("image_prompt")
+            scene.get("ai_image")
+            or scene.get("image_prompt")
             or scene.get("image_path")
             or scene.get("footage_url")
         )

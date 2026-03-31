@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 from datetime import datetime
@@ -117,7 +118,9 @@ def run_render(topic):
 
     proc = subprocess.Popen(
         ["npx", "remotion", "render", "ObsidianArchive", str(output),
-         "--concurrency=4", "--gl=swangle", "--codec=h264", "--crf=15",
+         "--concurrency=4",
+         f"--gl={os.environ.get('REMOTION_GL', 'swangle')}",
+         "--codec=h264", "--crf=15",
          "--enable-multiprocess-on-linux"],
         cwd=BASE_DIR / "remotion",
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

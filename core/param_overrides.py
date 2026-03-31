@@ -135,6 +135,10 @@ PARAM_MIN_STEP: dict[str, float] = {
     "music.energy_correlation_weight": 0.05,
     "music.usage_penalty": 0.005,
     "music.crossfade_start_pct": 0.03,
+    "volume.act1": 0.05,
+    "volume.act2": 0.05,
+    "volume.act3": 0.05,
+    "volume.ending": 0.05,
     "color.blend_factor": 0.01,
     "color.contrast_boost": 0.01,
 }
@@ -201,7 +205,8 @@ def get_override(key: str, default: float) -> float:
     Never crashes — returns default on any error.
     """
     cache = _pipeline_cache if _pipeline_cache is not None else _fetch_from_supabase()
-    val = cache.get(key, default)
+    fallback = PARAM_DEFAULTS.get(key, default)
+    val = cache.get(key, fallback)
     # Clamp to safety bounds
     if key in PARAM_BOUNDS:
         lo, hi = PARAM_BOUNDS[key]

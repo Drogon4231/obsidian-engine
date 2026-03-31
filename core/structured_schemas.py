@@ -283,6 +283,15 @@ SCENE_BREAKDOWN_SCHEMA = {
                             "conclusion", "coda", "callback", "silence",
                         ],
                     },
+                    "claim_confidence": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "enum": ["established", "contested", "speculative"],
+                            },
+                            {"type": "null"},
+                        ],
+                    },
                 },
                 "required": [
                     "scene_id", "narration", "duration_seconds",

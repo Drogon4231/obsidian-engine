@@ -431,11 +431,19 @@ def verify_visual_output(
         scene_boundaries.add(round(s.get("start_time", 0), 0))
         scene_boundaries.add(round(s.get("end_time", 0), 0))
 
+    # Collect time ranges where black frames are expected (silence beats, text overlays, transitions)
+    expected_dark_ranges = set()
+    for s in scenes:
+        if s.get("intent_silence_beat") or s.get("visual_treatment") == "text_overlay_dark" or s.get("is_breathing_room"):
+            expected_dark_ranges.add(round(s.get("start_time", 0), 0))
+            expected_dark_ranges.add(round(s.get("end_time", 0), 0))
+
     unexpected_black = []
     for seg in black_segments:
         start_rounded = round(seg.get("start", 0), 0)
         near_boundary = any(abs(start_rounded - b) < 2 for b in scene_boundaries)
-        if not near_boundary:
+        near_expected_dark = any(abs(start_rounded - d) < 3 for d in expected_dark_ranges)
+        if not near_boundary and not near_expected_dark:
             unexpected_black.append(seg)
 
     result.black_frame_report = {

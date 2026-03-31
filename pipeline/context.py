@@ -61,3 +61,4 @@ class PipelineContext:
     footage_data: dict | None = None
     manifest: dict | None = None
     tts_script: dict | None = None
+    display_script: dict | None = None

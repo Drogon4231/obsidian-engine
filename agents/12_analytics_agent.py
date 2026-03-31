@@ -2529,11 +2529,23 @@ def run() -> dict:
                             obs_records, current_params, opt_state, confidence
                         )
 
-                        # Auto-apply small changes
+                        # Observation mode: require approval for ALL proposals until
+                        # we have enough data to trust the optimizer
+                        _MIN_VIDEOS_FOR_AUTO_APPLY = 20
+                        _MIN_AVG_VIEWS = 50
+                        _avg_views = sum(
+                            o.metrics.views_velocity_48h for o in obs_records
+                        ) / max(len(obs_records), 1)
+                        _observation_mode = (
+                            len(obs_records) < _MIN_VIDEOS_FOR_AUTO_APPLY
+                            or _avg_views < _MIN_AVG_VIEWS
+                            or confidence in ("none", "low")
+                        )
+
                         auto_applied = {}
                         pending_approval = []
                         for proposal in result.proposals:
-                            if proposal.requires_approval:
+                            if proposal.requires_approval or _observation_mode:
                                 pending_approval.append({
                                     "param_key": proposal.param_key,
                                     "current_value": proposal.current_value,
@@ -2543,6 +2555,9 @@ def run() -> dict:
                                 })
                             else:
                                 auto_applied[proposal.param_key] = proposal.proposed_value
+
+                        if _observation_mode and result.proposals:
+                            print(f"[Analytics] Optimizer OBSERVATION MODE ({len(obs_records)}/{_MIN_VIDEOS_FOR_AUTO_APPLY} videos) — {len(result.proposals)} proposals saved for approval, none auto-applied")
 
                         if auto_applied:
                             save_override_batch(auto_applied, approved_by="optimizer")

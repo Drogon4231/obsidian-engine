@@ -104,8 +104,29 @@ def init_context(topic: str, resume: bool, from_stage: int, is_experiment: bool,
 
     # Series continuation: load Part 1 context if this is Part 2+
     ctx.series_meta = series_meta
-    if series_meta and series_meta.get("series_part", 1) > 1:
-        _load_parent_context(ctx, series_meta)
+    # Auto-load series metadata from Supabase if not passed via CLI
+    if not ctx.series_meta:
+        try:
+            from clients.supabase_client import get_client
+            _sc = get_client()
+            _topic_row = _sc.table("topics").select("source, metadata")\
+                .eq("topic", topic).limit(1).execute()
+            if _topic_row.data and _topic_row.data[0].get("source") == "series_auto":
+                _meta = _topic_row.data[0].get("metadata") or {}
+                if _meta.get("series_part", 1) > 1:
+                    ctx.series_meta = _meta
+                    logger.info(f"[Pipeline] Auto-loaded series metadata from Supabase: Part {_meta.get('series_part')}")
+        except Exception as _e:
+            logger.debug(f"[Pipeline] Series metadata auto-load failed (non-fatal): {_e}")
+    # Also detect from topic name as final fallback
+    if not ctx.series_meta:
+        import re as _re
+        _part_match = _re.search(r'\(Part (\d+)', topic)
+        if _part_match and int(_part_match.group(1)) > 1:
+            ctx.series_meta = {"series_part": int(_part_match.group(1)), "parent_topic": topic.split("(Part")[0].strip()}
+            logger.info(f"[Pipeline] Inferred series metadata from topic name: Part {ctx.series_meta['series_part']}")
+    if ctx.series_meta and ctx.series_meta.get("series_part", 1) > 1:
+        _load_parent_context(ctx, ctx.series_meta)
 
     # Resume: find most recent existing state file for this topic
     if resume:

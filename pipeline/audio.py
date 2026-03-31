@@ -16,7 +16,7 @@ from pipeline.voice import _get_scene_voice_settings, _get_inter_scene_pause, _g
 logger = get_logger(__name__)
 
 
-def run_audio(script_data, scene_data=None):
+def run_audio(script_data, scene_data=None, display_script=None):
     import requests
     try:
         from mutagen.mp3 import MP3
@@ -136,19 +136,54 @@ def run_audio(script_data, scene_data=None):
     # Scene-aware: chunk by scene narration with mood-specific voice settings
     # Legacy: chunk by text splitting with keyword-based prosody detection
 
-    scenes = []
+    all_scenes = []
     if scene_data and isinstance(scene_data, dict):
-        scenes = scene_data.get("scenes", [])
-        # Filter out scenes with empty narration
-        scenes = [s for s in scenes if (s.get("narration", "") or "").strip()]
+        all_scenes = scene_data.get("scenes", [])
 
-    use_scene_aware = len(scenes) >= 3  # Need meaningful scene data
+    # Build list of (original_index, scene) pairs, filtering empty narration
+    narrated_scenes = [
+        (orig_idx, s) for orig_idx, s in enumerate(all_scenes)
+        if (s.get("narration", "") or "").strip()
+    ]
+
+    use_scene_aware = len(narrated_scenes) >= 3  # Need meaningful scene data
 
     if use_scene_aware:
-        # ── Resolve scene intent early (before audio) for intent_pace_modifier ──
+        # ── Resolve scene intent for ALL scenes (not just narrated) ──────
+        # This ensures convert.py can reuse cached intents instead of
+        # re-resolving on a potentially different scene list.
         try:
             from media.scene_intent import resolve_all_scenes
-            scenes = resolve_all_scenes(scenes)
+            all_scenes_resolved = resolve_all_scenes(all_scenes)
+            # Write intent cache so convert.py can skip re-resolution
+            _intent_cache_path = MEDIA_DIR / "scene_intents_cache.json"
+            _intent_cache = []
+            for _rs in all_scenes_resolved:
+                _intent_cache.append({
+                    k: v for k, v in _rs.items()
+                    if k.startswith("intent_")
+                })
+            import tempfile
+            _tmp_fd, _tmp_path = tempfile.mkstemp(
+                dir=str(MEDIA_DIR), suffix=".json"
+            )
+            try:
+                with os.fdopen(_tmp_fd, "w") as _tmp_f:
+                    json.dump(_intent_cache, _tmp_f, indent=2)
+                os.replace(_tmp_path, str(_intent_cache_path))
+                logger.info(f"[Audio] Cached scene intents for {len(_intent_cache)} scenes")
+            except Exception:
+                Path(_tmp_path).unlink(missing_ok=True)
+                raise
+
+            # Update all_scenes with resolved data (used by narrated_scenes below)
+            all_scenes = all_scenes_resolved
+
+            # Rebuild narrated_scenes from updated all_scenes
+            narrated_scenes = [
+                (orig_idx, all_scenes[orig_idx])
+                for orig_idx, _ in narrated_scenes
+            ]
         except Exception as _intent_err:
             logger.warning(f"[Audio] WARNING: Scene intent resolution failed: {_intent_err}")
 
@@ -157,12 +192,13 @@ def run_audio(script_data, scene_data=None):
         # Each entry: (text, voice_settings, voice_id, speed, scene_idx)
         # Plus optional silence entries: (None, None, None, None, scene_idx, pause_duration)
 
-        total_scenes = len(scenes)
+        total_scenes = len(narrated_scenes)
+        scenes = [s for _, s in narrated_scenes]
         total_words_est = sum(len((s.get("narration", "") or "").split()) for s in scenes)
         logger.info(f"[Audio] Scene-aware mode: {total_scenes} scenes, ~{total_words_est} words")
 
         chunk_plan = []  # list of dicts describing each chunk
-        for si, scene in enumerate(scenes):
+        for si, (orig_idx, scene) in enumerate(narrated_scenes):
             narration = clean_script(scene.get("narration", "").strip())
             if not narration:
                 continue
@@ -171,7 +207,7 @@ def run_audio(script_data, scene_data=None):
             # Apply intent pace modifier from scene_intent resolution
             pace_mod = scene.get("intent_pace_modifier", 1.0)
             final_speed = round(max(0.65, min(1.0, spd * pace_mod)), 2)
-            logger.info(f"  [Voice] Scene {si}: raw_spd={spd:.2f} × pace={pace_mod} = {final_speed}")
+            logger.info(f"  [Voice] Scene {orig_idx} (pos {si}): raw_spd={spd:.2f} × pace={pace_mod} = {final_speed}")
             vs["speed"] = final_speed
             spd = final_speed
             mood = (scene.get("mood", "") or "dark").lower()
@@ -373,6 +409,38 @@ def run_audio(script_data, scene_data=None):
     if scene_word_ranges:
         for si in sorted(scene_word_ranges.keys()):
             scene_boundaries.append(list(scene_word_ranges[si]))
+
+    # ── Fix caption text: display_script overrides ───────────────────────
+    # display_script contains original spellings (not phonetic). When the
+    # TTS format agent rewrites words for pronunciation, captions should
+    # show the original display_script text. We align TTS words to display
+    # words positionally and replace any that differ.
+    if display_script and display_script.get("full_script"):
+        try:
+            _display_words = display_script["full_script"].split()
+            _tts_words = (script_data.get("full_script", "") or "").split()
+            # Build a positional map: TTS word index → display word
+            # Only works when TTS script and display script have the same word count
+            # (the TTS format agent replaces words 1:1 in most cases)
+            if len(_display_words) == len(_tts_words):
+                _tts_to_display = {}
+                for _wi, (_tw, _dw) in enumerate(zip(_tts_words, _display_words)):
+                    if _tw.lower() != _dw.lower():
+                        _tts_to_display[_tw.lower()] = _dw
+                if _tts_to_display:
+                    _applied = 0
+                    for w in all_words:
+                        _wl = w["word"].lower()
+                        if _wl in _tts_to_display:
+                            w["word"] = _tts_to_display[_wl]
+                            _applied += 1
+                    if _applied:
+                        logger.info(f"[Audio] Fixed {_applied} caption words from display_script")
+            else:
+                logger.debug(f"[Audio] display_script word count ({len(_display_words)}) != "
+                             f"TTS script ({len(_tts_words)}) — skipping positional override")
+        except Exception as _ds_err:
+            logger.warning(f"[Audio] display_script override failed (non-fatal): {_ds_err}")
 
     ts_path = str(MEDIA_DIR / "timestamps.json")
     with open(ts_path, "w") as f:

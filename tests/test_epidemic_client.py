@@ -17,24 +17,20 @@ class TestEpidemicSoundClient:
             return EpidemicSoundClient()
 
     def _mock_mcp_response(self, result_data):
-        """Create a mock response matching MCP JSON-RPC format."""
+        """Create a mock response matching MCP SSE format (data: {...})."""
         import json
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = json.dumps({
+        sse_body = 'data: ' + json.dumps({
             "jsonrpc": "2.0",
             "result": {
                 "content": [{"type": "text", "text": json.dumps(result_data)}]
             },
             "id": 1,
         })
-        mock_resp.json.return_value = {
-            "jsonrpc": "2.0",
-            "result": {
-                "content": [{"type": "text", "text": json.dumps(result_data)}]
-            },
-            "id": 1,
-        }
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = sse_body
+        mock_resp.headers = {"mcp-session-id": "test-session-123"}
+        mock_resp.cookies = MagicMock()
         return mock_resp
 
     def test_init_reads_env_var(self):
@@ -61,6 +57,8 @@ class TestEpidemicSoundClient:
         mock_post.return_value = self._mock_mcp_response({"results": []})
 
         c = self._make_client()
+        c._session_id = "test"
+        c._session_headers = {"Authorization": "Bearer fake-test-key", "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Mcp-Session-Id": "test"}
         c._call_tool("test_tool", {"arg": "val"})
 
         args, kwargs = mock_post.call_args
@@ -93,48 +91,57 @@ class TestEpidemicSoundClient:
     @patch("requests.post")
     def test_search_music(self, mock_post):
         mock_post.return_value = self._mock_mcp_response({
-            "recordings": [{"id": "123", "title": "Test Track", "bpm": 90}]
+            "data": {"recordings": {"nodes": [
+                {"recording": {"id": "123", "title": "Test Track", "bpm": 90}}
+            ]}}
         })
 
         c = self._make_client()
+        c._session_id = "test"
+        c._session_headers = {"Authorization": "Bearer fake-test-key", "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Mcp-Session-Id": "test"}
         results = c.search_music(keyword="dark cinematic", bpm_min=60, bpm_max=100, limit=5)
 
         assert len(results) == 1
         assert results[0]["id"] == "123"
-        # Verify tool name
         call_json = mock_post.call_args[1]["json"]
-        assert call_json["params"]["name"] == "search_music"
+        assert call_json["params"]["name"] == "SearchRecordings"
 
     @patch("requests.post")
     def test_search_sfx(self, mock_post):
         mock_post.return_value = self._mock_mcp_response({
-            "sound_effects": [{"id": "sfx1", "title": "Boom"}]
+            "data": {"soundEffects": {"nodes": [
+                {"soundEffect": {"id": "sfx1", "title": "Boom"}}
+            ]}}
         })
 
         c = self._make_client()
+        c._session_id = "test"
+        c._session_headers = {"Authorization": "Bearer fake-test-key", "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Mcp-Session-Id": "test"}
         results = c.search_sfx(keyword="dramatic boom")
 
         assert len(results) == 1
         assert results[0]["id"] == "sfx1"
         call_json = mock_post.call_args[1]["json"]
-        assert call_json["params"]["name"] == "search_sound_effects"
+        assert call_json["params"]["name"] == "SearchSoundEffects"
 
     @patch("requests.post")
     def test_adapt_track(self, mock_post):
         mock_post.return_value = self._mock_mcp_response({
-            "job_id": "job123", "status": "PENDING"
+            "data": {"recordingEdit": {"id": "job123", "status": "PENDING"}}
         })
 
         c = self._make_client()
+        c._session_id = "test"
+        c._session_headers = {"Authorization": "Bearer fake-test-key", "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "Mcp-Session-Id": "test"}
         result = c.adapt_track("track1", target_duration_ms=300000)
 
         assert result["job_id"] == "job123"
         call_json = mock_post.call_args[1]["json"]
-        assert call_json["params"]["name"] == "edit_recording"
+        assert call_json["params"]["name"] == "EditRecording"
 
     @patch("requests.post")
     def test_check_key_valid_true(self, mock_post):
-        mock_post.return_value = self._mock_mcp_response({"recordings": []})
+        mock_post.return_value = self._mock_mcp_response({"data": {"recordings": {"nodes": []}}})
 
         c = self._make_client()
         assert c.check_key_valid() is True

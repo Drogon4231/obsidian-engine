@@ -274,8 +274,23 @@ def _run_script_doctor(ctx: PipelineContext, runner: StageRunner, a04, a04b) -> 
                 ctx.state["script_doctor_scores"] = doctor_result.get("scores", {})
                 save_state(ctx.state, ctx.state_path)
                 break
+            # Soft enforcement: warn + Telegram alert when Script Doctor rejects
+            _sd_feedback = doctor_result.get("feedback", "")
+            _sd_scores = doctor_result.get("scores", {})
+            _sd_avg = doctor_result.get("average_score", 0)
+            logger.warning(f"[Pipeline] Script Doctor rejected script "
+                           f"(avg {_sd_avg}/10, attempt {_sd_attempt + 1}/{_sd_max_attempts + 1})")
+            try:
+                from server.notify import _tg
+                _tg(f"Script Doctor rejected (attempt {_sd_attempt + 1}/{_sd_max_attempts + 1})\n"
+                    f"Avg score: {_sd_avg}/10\n"
+                    f"Scores: {_sd_scores}\n"
+                    f"Feedback: {(_sd_feedback or 'none')[:500]}")
+            except Exception:
+                pass
+
             if _sd_attempt < _sd_max_attempts:
-                feedback = doctor_result.get("feedback", "")
+                feedback = _sd_feedback
                 if feedback:
                     logger.info(f"[Pipeline] Script Doctor: needs revision (attempt {_sd_attempt + 1}/{_sd_max_attempts}) \u2014 rewriting...")
                     improved = a04.run(ctx.research, ctx.angle, ctx.blueprint, quality_feedback=feedback)

@@ -344,7 +344,7 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                                     f"Keep the character's face, build, and clothing identical. {cur_style}{era_negative}"
                                 )
                                 result = _fal_subscribe_with_retry("fal-ai/flux-pro/kontext", {
-                                    "image": f"data:image/jpeg;base64,{ref_b64}",
+                                    "image_url": f"data:image/jpeg;base64,{ref_b64}",
                                     "prompt": kontext_prompt,
                                     "aspect_ratio": "16:9",
                                     "num_images": 1,
@@ -426,9 +426,16 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                 fallback_path = assets_dir / f"scene_{idx:03d}_fallback.jpg"
                 from pipeline.helpers import download_file as _dl
                 _dl(wiki_url, fallback_path)
-                scene["ai_image"] = str(fallback_path)
-                logger.info(f"  [{_thread}] Using Wikimedia fallback: {fallback_path.name}")
-                return (idx, scene, True)
+                # Validate downloaded file is actually an image (not a video or HTML page)
+                import imghdr
+                img_type = imghdr.what(str(fallback_path))
+                if img_type not in ("jpeg", "png", "gif", "webp", "bmp"):
+                    fallback_path.unlink(missing_ok=True)
+                    logger.warning(f"  [{_thread}] Wikimedia fallback is not an image (type={img_type}) — skipping")
+                else:
+                    scene["ai_image"] = str(fallback_path)
+                    logger.info(f"  [{_thread}] Using Wikimedia fallback: {fallback_path.name}")
+                    return (idx, scene, True)
             except Exception as fb_err:
                 logger.error(f"  [{_thread}] Wikimedia fallback also failed: {fb_err}")
         scene["ai_image"] = None
@@ -517,7 +524,7 @@ def run_images(manifest):
     if character_portraits:
         logger.info(f"[Images] Character portraits generated: {len(character_portraits)}")
 
-    IMAGE_MODEL = os.getenv("IMAGE_MODEL", "recraft").lower()
+    IMAGE_MODEL = os.getenv("IMAGE_MODEL", "flux").lower()
 
     STYLE_FLUX = ("masterwork oil painting, museum-quality historical illustration, "
                   "dramatic cinematic composition inspired by Caravaggio and Rembrandt, "

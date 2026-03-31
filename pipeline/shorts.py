@@ -251,7 +251,7 @@ def run_short_images(short_storyboard_data):
     os.environ["FAL_KEY"] = FAL_KEY
     scenes = short_storyboard_data.get("scenes", [])
 
-    IMAGE_MODEL = os.getenv("IMAGE_MODEL", "recraft").lower()
+    IMAGE_MODEL = os.getenv("IMAGE_MODEL", "flux").lower()
 
     STYLE_FLUX = ("oil painting style, dramatic cinematic lighting, dark atmospheric shadows, "
                   "rich Renaissance color palette, high detail, PORTRAIT vertical 9:16 composition, "

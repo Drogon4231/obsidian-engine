@@ -343,14 +343,22 @@ def _run_wave2(ctx: PipelineContext, runner: StageRunner) -> None:
         except Exception as vc_err:
             logger.warning(f"[Pipeline] Visual Continuity failed (non-fatal): {vc_err}")
 
-    # TTS Formatting
+    # TTS Formatting — produces two versions:
+    # 1. tts_script: phonetic respellings for ElevenLabs audio generation
+    # 2. display_script: original spellings for captions/word_timestamps
     ctx.tts_script = ctx.script
+    ctx.display_script = ctx.script
     if ctx.script and not runner.done(8):
         if a_tts_format:
             try:
                 formatted = a_tts_format.run(ctx.script)
                 if formatted and formatted.get("full_script"):
-                    ctx.tts_script = {**ctx.script, "full_script": formatted["full_script"]}
+                    # Display text uses full_script (original spellings for captions)
+                    ctx.display_script = {**ctx.script, "full_script": formatted["full_script"]}
+                    # TTS text uses tts_script if available (phonetic respellings),
+                    # falls back to full_script (no pronunciation changes)
+                    tts_text = formatted.get("tts_script", formatted["full_script"])
+                    ctx.tts_script = {**ctx.script, "full_script": tts_text}
                     changes = formatted.get("changes_made", [])
                     logger.info(f"[TTS Format] \u2713 {len(changes)} changes applied for spoken delivery")
                 else:
@@ -358,6 +366,7 @@ def _run_wave2(ctx: PipelineContext, runner: StageRunner) -> None:
             except Exception as fmt_err:
                 logger.warning(f"[TTS Format] Warning: {fmt_err} \u2014 using clean_script fallback")
         ctx.tts_script = {**ctx.tts_script, "full_script": clean_script(ctx.tts_script.get("full_script", ""))}
+        ctx.display_script = {**ctx.display_script, "full_script": clean_script(ctx.display_script.get("full_script", ""))}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -381,7 +390,7 @@ def _run_wave3(ctx: PipelineContext, runner: StageRunner) -> None:
     if _need_audio and _need_footage:
         logger.info("\n[Pipeline] Running Audio + Footage + Thumbnail in parallel...")
         with ThreadPoolExecutor(max_workers=3, thread_name_prefix="dag_w3") as executor:
-            _audio_future = executor.submit(runner.run_stage, 8, "Audio Production", run_audio, ctx.tts_script, ctx.scenes_data)
+            _audio_future = executor.submit(runner.run_stage, 8, "Audio Production", run_audio, ctx.tts_script, ctx.scenes_data, ctx.display_script)
             _footage_future = executor.submit(runner.run_stage, 9, "Footage Hunting", a09.run, ctx.scenes_data or {})
 
             _thumb_future = None
@@ -400,7 +409,7 @@ def _run_wave3(ctx: PipelineContext, runner: StageRunner) -> None:
                 except Exception as e:
                     logger.warning(f"[Pipeline] Thumbnail agent warning: {e}")
     else:
-        ctx.audio_data = runner.run_stage(8, "Audio Production", run_audio, ctx.tts_script, ctx.scenes_data)
+        ctx.audio_data = runner.run_stage(8, "Audio Production", run_audio, ctx.tts_script, ctx.scenes_data, ctx.display_script)
         ctx.footage_data = runner.run_stage(9, "Footage Hunting", a09.run, ctx.scenes_data or {})
         if ctx.seo and not ctx.state.get("thumbnail"):
             try:
@@ -421,11 +430,31 @@ def _run_wave3(ctx: PipelineContext, runner: StageRunner) -> None:
 def _build_manifest(ctx: PipelineContext, runner: StageRunner) -> None:
     """Build or load media manifest."""
     if not runner.done(9):
+        # Build manifest from footage data, then merge in Agent 07 scene fields
+        # (narrative_function, claim_confidence, visual_treatment, motion graphics, etc.)
+        # Footage data (stage 9) has visuals; scenes_data (stage 7) has narrative metadata.
+        _footage_scenes = ctx.footage_data.get("scenes", []) if ctx.footage_data else []
+        _scene_scenes = ctx.scenes_data.get("scenes", []) if ctx.scenes_data else []
+        # Merge stage 7 fields into footage scenes by index
+        _merge_keys = [
+            "narrative_function", "claim_confidence", "visual_treatment",
+            "is_reveal_moment", "is_breathing_room", "show_map", "show_timeline",
+            "lower_third", "key_text", "key_text_type", "retention_hook",
+            "year", "location", "characters_mentioned",
+        ]
+        # Keys where stage 7 should OVERRIDE stage 9's version
+        _override_keys = {"characters_mentioned", "is_reveal_moment", "is_breathing_room"}
+        for i, fs in enumerate(_footage_scenes):
+            if i < len(_scene_scenes):
+                for mk in _merge_keys:
+                    if mk in _scene_scenes[i]:
+                        if mk in _override_keys or mk not in fs:
+                            fs[mk] = _scene_scenes[i][mk]
         ctx.manifest = {
             "topic": ctx.topic,
             "title": ctx.seo.get("recommended_title", ctx.topic) if ctx.seo else ctx.topic,
             "audio": ctx.audio_data,
-            "scenes": ctx.footage_data.get("scenes", []) if ctx.footage_data else [],
+            "scenes": _footage_scenes,
             "credits": ctx.footage_data.get("credits", []) if ctx.footage_data else [],
             "total_duration_seconds": ctx.audio_data.get("total_duration_seconds", 0) if ctx.audio_data else 0,
         }
