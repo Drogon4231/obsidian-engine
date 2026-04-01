@@ -539,6 +539,9 @@ def build_description(seo_data, verification_data=None):
     lines.append("Every story is real. Every fact is verified.")
     lines.append("")
     lines.append("Subscribe for new documentaries every week.")
+    lines.append("")
+    lines.append("This video was created with AI-assisted research, narration, and visuals.")
+    lines.append("All historical claims are fact-verified against scholarly sources.")
     lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("")
     # Music attribution — only if music_manager provides one
