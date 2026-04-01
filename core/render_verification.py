@@ -571,6 +571,24 @@ def verify_render_output(
     audio_data = pipeline_state.get("audio_data", {})
     if not word_timestamps and audio_data:
         word_timestamps = audio_data.get("word_timestamps", [])
+    # Fallback: scenes may be nested under stage keys, not top-level
+    if not scenes:
+        stage_11 = pipeline_state.get("stage_11", {})
+        if isinstance(stage_11, dict):
+            scenes = stage_11.get("scenes", [])
+    if not scenes:
+        stage_10 = pipeline_state.get("stage_10", {})
+        if isinstance(stage_10, dict):
+            scenes = stage_10.get("scenes", [])
+    if not scenes:
+        # Last resort: read from video-data.json
+        try:
+            import json as _json
+            _vd = Path(video_path).parent.parent / "remotion" / "src" / "video-data.json"
+            if _vd.exists():
+                scenes = _json.loads(_vd.read_text()).get("scenes", [])
+        except Exception:
+            pass
 
     # Build narration mask from word timestamps
     narration_mask = _build_narration_mask(word_timestamps)

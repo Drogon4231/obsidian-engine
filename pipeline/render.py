@@ -68,8 +68,12 @@ def validate_video_ffprobe(video_path, expected_duration=0, min_bitrate=3000):
 
             logger.info(f"[Validate] ✓ ffprobe OK — {duration:.0f}s, video+audio streams present, "
                   f"bitrate={bitrate_kbps:.0f}kbps, audio_codec={audio_codec}")
-            return True, {"duration": duration, "has_video": has_video, "has_audio": has_audio,
-                          "audio_codec": audio_codec, "bitrate_kbps": bitrate_kbps}
+            return True, {"duration": duration, "duration_seconds": duration,
+                          "has_video": has_video, "has_audio": has_audio,
+                          "audio_codec": audio_codec, "bitrate_kbps": bitrate_kbps,
+                          "width": int(video_stream.get("width", 0)),
+                          "height": int(video_stream.get("height", 0)),
+                          "codec": video_stream.get("codec_name", "")}
         else:
             stderr_snippet = (result.stderr or "")[:200]
             return False, f"ffprobe exited with code {result.returncode}: {stderr_snippet}"
@@ -119,7 +123,7 @@ def run_render(topic):
     proc = subprocess.Popen(
         ["npx", "remotion", "render", "ObsidianArchive", str(output),
          "--concurrency=4",
-         f"--gl={os.environ.get('REMOTION_GL', 'swangle')}",
+         f"--gl={os.environ.get('REMOTION_GL', 'angle')}",
          "--codec=h264", "--crf=15",
          "--enable-multiprocess-on-linux"],
         cwd=BASE_DIR / "remotion",

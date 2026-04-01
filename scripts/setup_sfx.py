@@ -130,10 +130,12 @@ def should_play_sfx(scene: dict) -> bool:
     if scene.get("is_reveal_moment"):
         return True
     narrative_fn = scene.get("narrative_function", "")
-    if narrative_fn in ("climax", "twist", "reveal"):
+    if narrative_fn in ("climax", "twist", "reveal", "escalation", "complication"):
         return True
     intent = scene.get("intent_transition_type", "")
     if intent in ("act", "reveal"):
+        return True
+    if scene.get("is_breathing_room"):
         return True
     return False
 

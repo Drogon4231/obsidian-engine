@@ -115,10 +115,10 @@ const DEFAULT_BOUNDARIES: Required<ActBoundaries> = {
 };
 
 const DEFAULT_MULTIPLIERS: Required<ActMultipliers> = {
-  act1: 0.80,
-  act2: 1.20,
-  act3: 0.60,
-  ending: 1.40,
+  act1: 0.85,
+  act2: 1.00,
+  act3: 1.25,
+  ending: 0.90,
 };
 
 /**
@@ -146,7 +146,7 @@ export function buildVolumeEnvelope(
 // ── Ducking ────────────────────────────────────────────────────────────────
 
 export interface DuckingConfig {
-  /** Volume during speech (default: 0.08) */
+  /** Volume during speech (default: 0.18) */
   speechVolume?: number;
   /** Volume during silence (default: 0.28) */
   silenceVolume?: number;
@@ -159,7 +159,7 @@ export interface DuckingConfig {
 }
 
 const DEFAULT_DUCKING = {
-  speechVolume: 0.08,
+  speechVolume: 0.18,
   silenceVolume: 0.28,
   attackSeconds: 0.1,
   releaseSeconds: 0.4,
@@ -312,8 +312,8 @@ export function primaryMusicVolume(
   const scene = scenes.length > 0 ? getSceneAtFrame(scenes, frame, fps) : null;
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
-  // Silence beat override: near-zero music for very low energy scenes
-  if (scene && (scene.intent_scene_energy ?? 0.5) < 0.15) {
+  // Silence beat override: use intent_silence_beat flag (not energy threshold)
+  if (scene?.intent_silence_beat) {
     return 0.02; // Near-silence for devastating moments
   }
 
@@ -342,7 +342,7 @@ export function secondaryMusicVolume(
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
   // Silence beat override
-  if (scene && (scene.intent_scene_energy ?? 0.5) < 0.15) {
+  if (scene?.intent_silence_beat) {
     return 0.01;
   }
 
@@ -393,7 +393,7 @@ export function stemVolume(
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
   // Silence beat override
-  if (scene && (scene.intent_scene_energy ?? 0.5) < 0.15) {
+  if (scene?.intent_silence_beat) {
     return stem === 'drums' ? 0.03 : 0.01;
   }
 

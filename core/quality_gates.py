@@ -1582,8 +1582,14 @@ def run_tier2_content(video_path: str, script_data: dict, scenes_data: dict) -> 
             or scene.get("image_prompt")
             or scene.get("image_path")
             or scene.get("footage_url")
+            or scene.get("visual_description")
+            or scene.get("visual_type")
         )
-        has_duration = scene.get("duration_seconds", 0) > 0
+        # Duration may be stored as duration_seconds OR computed from start/end times
+        _dur = scene.get("duration_seconds", 0)
+        if not _dur and scene.get("end_time") and scene.get("start_time"):
+            _dur = scene.get("end_time", 0) - scene.get("start_time", 0)
+        has_duration = _dur > 0
 
         scored_scenes += 1
 

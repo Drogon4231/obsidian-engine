@@ -123,18 +123,24 @@ def get_sfx_for_scene(scene: dict) -> str | None:
         return None
 
     query = _build_sfx_query(scene)
-    cache_key = query  # Each unique query gets cached
+    scene_idx = scene.get("scene_id", scene.get("scene_index", 0))
+    cache_key = f"{query}__scene{scene_idx}"  # Per-scene cache key for SFX variety
 
     if cache_key in _sfx_cache:
         return _sfx_cache[cache_key]
 
     try:
         client = _get_client()
-        results = client.search_sfx(keyword=query, duration_max=5.0, limit=3)
+        results = client.search_sfx(keyword=query, duration_max=5.0, limit=5)
         if not results:
             return None
 
-        sfx = results[0]
+        # Rotate through results to avoid same SFX on every scene
+        _query_usage = getattr(get_sfx_for_scene, '_query_usage', {})
+        usage_count = _query_usage.get(query, 0)
+        sfx = results[usage_count % len(results)]
+        _query_usage[query] = usage_count + 1
+        get_sfx_for_scene._query_usage = _query_usage
         sfx_id = str(sfx.get("id", ""))
         title = sfx.get("title", "unknown")
 

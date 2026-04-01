@@ -64,7 +64,8 @@ class TestAlignScenesToWords:
         result = align_scenes_to_words(3, words, 7.0, scene_word_ranges=ranges)
         assert len(result) == 3
         assert result[0][0] == 0.0  # word 0 start
-        assert result[0][1] == 1.5  # word 1 end
+        # 4.0s min floor extends scene 0 to 4.0, post-pass shrinks to scene 1 start (2.0)
+        assert result[0][1] == 2.0  # shrunk to next scene start
         assert result[1][0] == 2.0  # word 2 start
         assert result[2][1] == 7.0  # last scene uses total_duration
 

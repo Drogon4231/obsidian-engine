@@ -48,6 +48,10 @@ def run_post_phase(
     # ── Stage 13: Upload ──────────────────────────────────────────────────────
     a11 = ctx.agents["a11"]
 
+    # Use thumbnail agent's scored output if available (War Room v5 fix C2)
+    _thumb_data = ctx.state.get("thumbnail") or {}
+    _thumbnail_path = _thumb_data.get("thumbnail_path") if isinstance(_thumb_data, dict) else None
+
     def do_upload():
         return a11.run(
             ctx.seo or ctx.state.get("stage_6", {}),
@@ -55,6 +59,7 @@ def run_post_phase(
             ctx.verification or ctx.state.get("stage_5", {}),
             research_data=ctx.research or ctx.state.get("stage_1", {}),
             privacy="public",
+            thumbnail_path=_thumbnail_path,
         )
 
     runner.run_stage(13, "YouTube Upload", do_upload)
@@ -247,11 +252,26 @@ def _save_to_supabase(ctx: PipelineContext) -> None:
             seo_data = ctx.seo or ctx.state.get("stage_6", {}) or {}
             audio_saved = ctx.audio_data or ctx.state.get("stage_8", {}) or {}
             script_saved = ctx.script or ctx.state.get("stage_4", {}) or {}
-            # Extract scene manifest from convert stage output for analytics
+            # Extract scene manifest from convert stage output BEFORE stripping
+            # (War Room v5 fix C4 — Red Team Attack #1 mitigation)
             convert_data = ctx.state.get("stage_11", {})
             scene_manifest = None
             if isinstance(convert_data, dict):
                 scene_manifest = convert_data.get("scene_manifest")
+            # Fallback: read scene_manifest from video-data.json if not in state
+            if scene_manifest is None:
+                try:
+                    import json as _json
+                    _vd_path = Path(__file__).resolve().parent.parent / "remotion" / "src" / "video-data.json"
+                    if _vd_path.exists():
+                        _vd = _json.loads(_vd_path.read_text())
+                        scene_manifest = _vd.get("scene_manifest")
+                        if scene_manifest:
+                            logger.info(f"[Pipeline] Scene manifest recovered from video-data.json ({len(scene_manifest)} scenes)")
+                except Exception as vd_err:
+                    logger.warning(f"[Pipeline] Could not read video-data.json for scene manifest: {vd_err}")
+            # Strip stage_11 (full video-data dict, 300-480KB) to prevent payload overflow
+            stripped_state = {k: v for k, v in ctx.state.items() if k != "stage_11"}
             supabase_client.save_video(
                 topic=ctx.topic,
                 title=seo_data.get("recommended_title", ctx.topic),
@@ -261,7 +281,7 @@ def _save_to_supabase(ctx: PipelineContext) -> None:
                 video_path="",
                 duration_seconds=audio_saved.get("total_duration_seconds", 0),
                 word_count=script_saved.get("word_count", 0) or len(script_saved.get("full_script", "").split()),
-                pipeline_state=ctx.state,
+                pipeline_state=stripped_state,
                 scene_manifest=scene_manifest,
             )
         except Exception as e:

@@ -282,8 +282,6 @@ def resolve_scene_intent(
     """
     mood = scene.get("mood", "dark")
     narrative_function = scene.get("narrative_function", "exposition")
-    position = scene.get("narrative_position", _infer_position(scene_index, total_scenes))
-
     # 1. Compute energy
     base_energy = _MOOD_ENERGY.get(mood, 0.5)
     modifiers = _FUNCTION_MODIFIERS.get(narrative_function, _FUNCTION_MODIFIERS["exposition"])
@@ -314,8 +312,9 @@ def resolve_scene_intent(
     # Use scene_index to pick a specific seed within the range
     motion_seed = seed_lo + (scene_index % (seed_hi - seed_lo + 1))
 
-    # 4. Resolve music volume
-    base_volume = _POSITION_VOLUME.get(position, 0.50)
+    # 4. Resolve music volume — blueprint-driven for dynamic range
+    pct_pos = scene_index / max(total_scenes - 1, 1) if total_scenes > 1 else 0.0
+    base_volume = _blueprint_volume(pct_pos)
     # Breathing room scenes get quieter music
     if narrative_function == "breathing_room":
         base_volume *= 0.7
@@ -392,6 +391,20 @@ def resolve_all_scenes(scenes: list[dict]) -> list[dict]:
 
 
 # ── Internal Helpers ─────────────────────────────────────────────────────────
+
+def _blueprint_volume(pct: float) -> float:
+    """Map a scene's percentage position to music volume using BLUEPRINT_TARGETS.
+
+    Walks EMOTIONAL_BLUEPRINT phases to find which phase this scene falls in,
+    then returns the corresponding music_mult from BLUEPRINT_TARGETS.
+    Falls back to 0.50 if no phase matches (should not happen).
+    """
+    for phase_name, (start_pct, end_pct) in EMOTIONAL_BLUEPRINT.items():
+        if start_pct <= pct < end_pct:
+            return BLUEPRINT_TARGETS[phase_name]["music_mult"]
+    # pct == 1.0 falls off the last phase boundary; use resolution
+    return BLUEPRINT_TARGETS["resolution"]["music_mult"]
+
 
 def _infer_position(scene_index: int, total_scenes: int) -> str:
     """Infer narrative position from scene index when not explicitly set."""

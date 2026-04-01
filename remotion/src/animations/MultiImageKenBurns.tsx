@@ -44,8 +44,8 @@ export const MultiImageKenBurns: React.FC<Props> = ({images, duration, seed = 0,
         );
         const opacity = Math.min(fadeIn, fadeOut);
 
-        // Skip rendering images that are fully transparent
-        if (opacity <= 0) return null;
+        // Skip rendering images that are fully transparent (epsilon to avoid float gaps)
+        if (opacity < 0.001) return null;
 
         // Each image gets a unique seed for different Ken Burns motion
         const imgSeed = seed + i * 3;
@@ -54,8 +54,8 @@ export const MultiImageKenBurns: React.FC<Props> = ({images, duration, seed = 0,
         // resets to 0 at each image's start, giving correct motion speed
         return (
           <div key={i} style={{position:'absolute', top:0, left:0, right:0, bottom:0, opacity}}>
-            <Sequence from={segStart} durationInFrames={segmentFrames}>
-              <KenBurns imageSrc={img} duration={segmentFrames} seed={imgSeed} treatment={treatment}/>
+            <Sequence from={segStart} durationInFrames={segmentFrames + crossfadeFrames}>
+              <KenBurns imageSrc={img} duration={segmentFrames + crossfadeFrames} seed={imgSeed} treatment={treatment}/>
             </Sequence>
           </div>
         );

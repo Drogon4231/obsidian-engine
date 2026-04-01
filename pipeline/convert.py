@@ -32,10 +32,16 @@ def align_scenes_to_words(n_scenes, words, total_duration, scene_word_ranges=Non
             start_t = words[w_start_idx]["start"]
             end_t = words[w_end_idx]["end"] if i < n_scenes - 1 else total_duration
 
-            # Ensure minimum scene duration of 0.5s
-            if end_t <= start_t:
-                end_t = start_t + 0.5
+            # Ensure minimum scene duration of 4.0s (multi-scene videos only)
+            if end_t - start_t < 4.0 and n_scenes > 1:
+                end_t = min(start_t + 4.0, total_duration)
             timings.append((round(start_t, 3), round(end_t, 3)))
+        # Post-pass: shrink any scene whose end_time overlaps next scene's start_time
+        for i in range(len(timings) - 1):
+            s_i, e_i = timings[i]
+            s_next, _ = timings[i + 1]
+            if e_i > s_next:
+                timings[i] = (s_i, s_next)
         logger.info("[Convert] Scene alignment: precise (scene-aware word ranges)")
         return timings
 
@@ -53,9 +59,15 @@ def align_scenes_to_words(n_scenes, words, total_duration, scene_word_ranges=Non
         w_end   = max(w_end, w_start)  # never let end < start
         start_t = words[w_start]["start"]
         end_t   = words[w_end]["end"] if i < n_scenes - 1 else total_duration
-        if end_t <= start_t:
-            end_t = start_t + 0.5
+        if end_t - start_t < 4.0 and n_scenes > 1:
+            end_t = min(start_t + 4.0, total_duration)
         timings.append((round(start_t, 3), round(end_t, 3)))
+    # Post-pass: shrink any scene whose end_time overlaps next scene's start_time
+    for i in range(len(timings) - 1):
+        s_i, e_i = timings[i]
+        s_next, _ = timings[i + 1]
+        if e_i > s_next:
+            timings[i] = (s_i, s_next)
     return timings
 
 # ── Stage 11: Convert to Remotion ─────────────────────────────────────────────
@@ -455,16 +467,16 @@ def run_convert(manifest, audio_data, topic="", era=""):
         from core.param_overrides import get_override
         audio_cfg = {
             "ducking": {
-                "speechVolume": get_override("ducking.speech_volume", 0.08),
+                "speechVolume": get_override("ducking.speech_volume", 0.18),
                 "silenceVolume": get_override("ducking.silence_volume", 0.28),
                 "attackSeconds": get_override("ducking.attack_seconds", 0.1),
                 "releaseSeconds": get_override("ducking.release_seconds", 0.4),
             },
             "actMultipliers": {
-                "act1": get_override("volume.act1", 0.80),
-                "act2": get_override("volume.act2", 1.20),
-                "act3": get_override("volume.act3", 0.60),
-                "ending": get_override("volume.ending", 1.40),
+                "act1": get_override("volume.act1", 0.85),
+                "act2": get_override("volume.act2", 1.00),
+                "act3": get_override("volume.act3", 1.25),
+                "ending": get_override("volume.ending", 0.90),
             },
             "crossfadeStartPct": get_override("music.crossfade_start_pct", 0.60),
         }

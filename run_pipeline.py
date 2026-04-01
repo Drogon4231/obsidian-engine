@@ -148,4 +148,10 @@ Time per video: ~25-40 minutes
             except Exception:
                 pass
             sys.exit(2)  # infrastructure failure — topic should be re-queued
+        # War Room v5: notify on ALL pipeline failures, not just credits
+        try:
+            from server.notify import notify_pipeline_failed
+            notify_pipeline_failed(topic, stage="unknown", error=str(_e)[:500])
+        except Exception:
+            pass
         raise

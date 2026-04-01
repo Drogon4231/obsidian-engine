@@ -189,10 +189,13 @@ def adapt_to_duration(track_id: str, total_duration: float,
                     if stem_path.exists() and stem_path.stat().st_size > 10000:
                         stems[stem_type.lower()] = f"music/stems/{stem_filename}"
                         logger.info(f"[Adapter] Stem downloaded: {stem_filename}")
+                    elif stem_path.exists() and stem_path.stat().st_size == 0:
+                        logger.warning(f"[Adapter] Stem {stem_type.lower()} expected but download produced empty file: {stem_filename} (0 bytes)")
                     else:
-                        logger.warning(f"[Adapter] Stem too small: {stem_filename}")
+                        size = stem_path.stat().st_size if stem_path.exists() else 0
+                        logger.warning(f"[Adapter] Stem {stem_type.lower()} expected but file too small or missing: {stem_filename} ({size} bytes)")
                 except Exception as stem_err:
-                    logger.warning(f"[Adapter] Stem {stem_type} download failed: {stem_err}")
+                    logger.warning(f"[Adapter] Stem {stem_type.lower()} expected but download failed: {stem_err}")
 
         return {
             "adapted_file": f"music/{adapted_filename}",

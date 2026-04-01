@@ -107,27 +107,27 @@ describe('distanceToSpeech', () => {
 
 describe('buildVolumeEnvelope', () => {
   it('returns act1 multiplier at start', () => {
-    expect(buildVolumeEnvelope(0)).toBe(0.80);
-    expect(buildVolumeEnvelope(0.24)).toBe(0.80);
+    expect(buildVolumeEnvelope(0)).toBe(0.85);
+    expect(buildVolumeEnvelope(0.24)).toBe(0.85);
   });
 
   it('returns act2 multiplier at midpoint', () => {
-    expect(buildVolumeEnvelope(0.25)).toBe(1.20);
-    expect(buildVolumeEnvelope(0.5)).toBe(1.20);
+    expect(buildVolumeEnvelope(0.25)).toBe(1.00);
+    expect(buildVolumeEnvelope(0.5)).toBe(1.00);
   });
 
   it('returns act3 multiplier for reveals', () => {
-    expect(buildVolumeEnvelope(0.65)).toBe(0.60);
-    expect(buildVolumeEnvelope(0.8)).toBe(0.60);
+    expect(buildVolumeEnvelope(0.65)).toBe(1.25);
+    expect(buildVolumeEnvelope(0.8)).toBe(1.25);
   });
 
   it('returns ending swell', () => {
-    expect(buildVolumeEnvelope(0.9)).toBe(1.40);
-    expect(buildVolumeEnvelope(1.0)).toBe(1.40);
+    expect(buildVolumeEnvelope(0.9)).toBe(0.90);
+    expect(buildVolumeEnvelope(1.0)).toBe(0.90);
   });
 
   it('accepts custom boundaries', () => {
-    expect(buildVolumeEnvelope(0.1, { act2Start: 0.1 })).toBe(1.20);
+    expect(buildVolumeEnvelope(0.1, { act2Start: 0.1 })).toBe(1.00);
   });
 
   it('accepts custom multipliers', () => {
@@ -141,7 +141,7 @@ describe('applyDucking', () => {
   const mask = [{ start: 1.0, end: 2.0 }];
 
   it('returns speechVolume during speech', () => {
-    expect(applyDucking(1.5, mask)).toBe(0.08);
+    expect(applyDucking(1.5, mask)).toBe(0.18);
   });
 
   it('returns silenceVolume far from speech', () => {
@@ -151,7 +151,7 @@ describe('applyDucking', () => {
   it('ramps between speech and silence with asymmetric timing', () => {
     // At 0.2s after speech ends: release ramp, t = 0.2/0.4 = 0.5
     const vol = applyDucking(2.2, mask);
-    expect(vol).toBeCloseTo(0.08 + 0.5 * 0.20, 2);
+    expect(vol).toBeCloseTo(0.18 + 0.5 * 0.10, 2);
   });
 
   it('accepts custom ducking config', () => {

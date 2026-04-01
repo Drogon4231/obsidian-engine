@@ -119,7 +119,8 @@ For titles: create 5 variants. Each must:
 2. Hint at darkness without cheap clickbait
 3. Feel like a documentary title, not a tabloid headline
 4. Be 60–70 characters
-5. Include the central figure's name when possible""",
+5. Include the central figure's name when possible
+6. NEVER use parenthetical suffixes like '(Part 1: The X)' in titles. Each title must stand alone as a complete, compelling statement. Series parts should be signaled through content, not labels.""",
         max_tokens=4000,
         stage_num=6,
         topic=topic,

@@ -126,8 +126,24 @@ def search_and_download_for_mood(mood: str, target_duration: float = 600,
             logger.info(f"[Epidemic] No results for mood '{mood}'")
             return None
 
-        # Pick the first result (sorted by relevance)
-        track = results[0]
+        # Avoid reusing recently-used tracks across videos (War Room v7 fix)
+        _recent_file = MUSIC_DIR / ".recent_tracks.json"
+        _recent_ids = set()
+        try:
+            if _recent_file.exists():
+                import json as _json
+                _recent_ids = set(_json.loads(_recent_file.read_text()))
+        except Exception:
+            pass
+        # Pick the first result not in recent history
+        track = None
+        for candidate in results:
+            if str(candidate.get("id", "")) not in _recent_ids:
+                track = candidate
+                break
+        if track is None:
+            track = results[0]  # fallback if all results are recent
+            logger.info(f"[Epidemic] All results for '{mood}' are recent — reusing least-recent")
         track_id = str(track.get("id", ""))
         title = track.get("title", "unknown")
         artist = ""
@@ -143,6 +159,14 @@ def search_and_download_for_mood(mood: str, target_duration: float = 600,
         # Check cache — don't re-download
         if output_path.exists() and output_path.stat().st_size > 50000:
             logger.info(f"[Epidemic] Cache hit: {filename}")
+            # Still record to recent history even on cache hit (War Room v7 fix)
+            try:
+                import json as _json
+                _recent_ids.add(track_id)
+                _recent_list = list(_recent_ids)[-20:]
+                _recent_file.write_text(_json.dumps(_recent_list))
+            except Exception:
+                pass
             return {
                 "filename": filename,
                 "track_id": track_id,
@@ -157,6 +181,15 @@ def search_and_download_for_mood(mood: str, target_duration: float = 600,
 
         if output_path.exists() and output_path.stat().st_size > 50000:
             logger.info(f"[Epidemic] Downloaded: {filename} ({bpm} BPM)")
+            # Record track to recent history to avoid reuse across videos
+            try:
+                import json as _json
+                _recent_ids.add(track_id)
+                # Keep last 20 tracks to allow cycling
+                _recent_list = list(_recent_ids)[-20:]
+                _recent_file.write_text(_json.dumps(_recent_list))
+            except Exception:
+                pass
             return {
                 "filename": filename,
                 "track_id": track_id,

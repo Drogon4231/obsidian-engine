@@ -718,7 +718,7 @@ def _sanitize_tags(raw_tags: list) -> list:
     return result
 
 
-def upload_video(video_path, title, description, tags, thumbnail_path=None, privacy="private"):
+def upload_video(video_path, title, description, tags, thumbnail_path=None, privacy="public"):
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
@@ -735,12 +735,19 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
             "title":       title[:100],  # YouTube limit
             "description": description[:5000],
             "tags":        _sanitize_tags(tags),
-            "categoryId":  "27",  # Education
+            "categoryId":  "24",  # Entertainment (documentary/history content)
             "defaultLanguage": "en",
+        },
+        "localizations": {
+            "hi": {
+                "title": title[:100],
+                "description": description[:5000],
+            },
         },
         "status": {
             "privacyStatus":          privacy,
             "selfDeclaredMadeForKids": False,
+            "selfDeclaredAlteredContent": True,
         }
     }
 
@@ -752,7 +759,7 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
     )
 
     request = youtube.videos().insert(
-        part="snippet,status",
+        part="snippet,status,localizations",
         body=body,
         media_body=media
     )
@@ -777,7 +784,7 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
                 chunksize=50 * 1024 * 1024
             )
             request = youtube.videos().insert(
-                part="snippet,status",
+                part="snippet,status,localizations",
                 body=body,
                 media_body=media
             )
@@ -811,7 +818,48 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
 
     return {"video_id": video_id, "url": video_url}
 
-def run(seo_data, manifest, verification_data=None, research_data=None, privacy="unlisted"):
+def batch_set_public(video_ids, stagger=True):
+    """Flip existing videos from unlisted/private to public.
+
+    If stagger=True, sets top 3 immediately; defers rest for manual daily flip.
+    """
+    from googleapiclient.discovery import build as gbuild
+
+    creds = get_credentials()
+    youtube = gbuild("youtube", "v3", credentials=creds)
+
+    immediate = video_ids[:3] if stagger else video_ids
+    deferred = video_ids[3:] if stagger else []
+
+    results = {"updated": [], "failed": [], "deferred": deferred}
+    for vid in immediate:
+        try:
+            resp = youtube.videos().list(part="status", id=vid).execute()
+            items = resp.get("items", [])
+            if not items:
+                print(f"[YouTube] Video {vid} not found — skipping")
+                continue
+            current = items[0]["status"]["privacyStatus"]
+            if current == "public":
+                print(f"[YouTube] {vid} already public — skipping")
+                continue
+            youtube.videos().update(
+                part="status",
+                body={"id": vid, "status": {"privacyStatus": "public"}},
+            ).execute()
+            print(f"[YouTube] {vid}: {current} -> public")
+            results["updated"].append(vid)
+        except Exception as e:
+            results["failed"].append({"video_id": vid, "error": str(e)})
+            print(f"[YouTube] Failed to update {vid}: {e}")
+
+    if deferred:
+        print(f"[YouTube] {len(deferred)} videos deferred for staggered release")
+    print(f"[YouTube] Updated {len(results['updated'])}/{len(video_ids)} videos to public")
+    return results
+
+
+def run(seo_data, manifest, verification_data=None, research_data=None, privacy="public", thumbnail_path=None):
     """Main entry point called from run_pipeline.py"""
 
     # Find latest rendered video
@@ -824,7 +872,7 @@ def run(seo_data, manifest, verification_data=None, research_data=None, privacy=
     title       = seo_data.get("recommended_title", "Untitled")
     tags        = seo_data.get("tags", [])
     description = build_description(seo_data, verification_data)
-    thumbnail   = generate_thumbnail(manifest)
+    thumbnail   = thumbnail_path if (thumbnail_path and Path(thumbnail_path).exists()) else generate_thumbnail(manifest)
 
     # Inject real chapters — prefer video-data.json (has real start_time) over footage manifest
     video_data_path = Path(__file__).resolve().parent.parent / "remotion" / "src" / "video-data.json"
@@ -924,11 +972,11 @@ if __name__ == "__main__":
     verification_data = state.get("stage_5", {})
     research_data     = state.get("stage_1", {})
 
-    privacy = "unlisted"
+    privacy = "public"
+    if "--unlisted" in sys.argv:
+        privacy = "unlisted"
     if "--private" in sys.argv:
         privacy = "private"
-    if "--public" in sys.argv:
-        privacy = "public"
 
     print(f"[YouTube] Privacy mode: {privacy}")
     result = run(seo_data, manifest, verification_data, research_data=research_data, privacy=privacy)

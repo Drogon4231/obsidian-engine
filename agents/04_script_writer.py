@@ -98,6 +98,8 @@ PERSONALITY — you are not a Wikipedia narrator. You are a human storyteller wh
 POV SHIFTS — shift perspective at least once in the script. Show the same event from two different viewpoints. "To the emperor, this was a routine decree. To the 3,000 prisoners in the dungeon below, it was a death sentence."
 
 REFLECTION BEAT — after the main revelation in Act 3, include a natural pause point. Write a short sentence (5-8 words) followed by a line break and then the ending. This creates a moment of silence where the weight of the revelation can land.
+WORD COUNT TARGET: Target 1,200-1,600 words for long-form documentaries (produces 8-11 minute videos at ~140 WPM). Scripts under 1,000 words are too short for the documentary format.
+
 Output ONLY the raw narration script. No JSON. No headers. No labels. Just the words."""
 
     if quality_feedback:
