@@ -12,7 +12,6 @@ from scripts.setup_ambience import (
     get_ambient_file,
     AMBIENT_TRACKS,
     ARCHITECTURE_TRACKS,
-    AMBIENCE_DIR,
 )
 
 

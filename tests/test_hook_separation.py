@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def _load_extract_acts():
     """Load extract_acts without triggering side effects from module-level code."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     # The module imports intel.dna_loader and core.agent_wrapper at top level.
     # Patch them so we can import the function without API dependencies.
