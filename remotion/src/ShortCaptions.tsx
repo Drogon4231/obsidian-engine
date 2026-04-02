@@ -13,7 +13,7 @@ interface ShortCaptionsProps {
 
 const PHRASE_SIZE = 4;
 
-const clean = (w: string) => w.replace(/[^\p{L}\p{N} '''.,!?;\u2014-]/gu, '').toUpperCase().trim();
+const clean = (w: string) => w.replace(/[^\p{L}\p{N} '''.,!?;]/gu, '').toUpperCase().trim();
 
 export const ShortCaptions: React.FC<ShortCaptionsProps> = ({words, sceneStartTime}) => {
   const frame = useCurrentFrame();
@@ -63,7 +63,7 @@ export const ShortCaptions: React.FC<ShortCaptionsProps> = ({words, sceneStartTi
         flexWrap: 'wrap',
         justifyContent: 'center',
         alignItems: 'flex-end',
-        gap: 6,
+        gap: 16,
         transform: `translateY(${phraseTranslateY}px)`,
         opacity: phraseOpacity,
       }}
@@ -96,7 +96,10 @@ export const ShortCaptions: React.FC<ShortCaptionsProps> = ({words, sceneStartTi
 
         const wordShadow = isCurrent
           ? '0 0 50px rgba(255,215,0,0.65), 0 0 20px rgba(255,215,0,0.3), 0 3px 12px rgba(0,0,0,1)'
-          : '0 2px 12px rgba(0,0,0,0.95)';
+          : '0 0 30px rgba(0,0,0,0.8), 0 2px 12px rgba(0,0,0,0.95)';
+
+        const cleanWord = clean(w.word);
+        if (!cleanWord) return null;
 
         return (
           <span
@@ -110,13 +113,13 @@ export const ShortCaptions: React.FC<ShortCaptionsProps> = ({words, sceneStartTi
               transform: `scale(${wordScale})`,
               transformOrigin: 'center bottom',
               textShadow: wordShadow,
-              letterSpacing: '-1.5px',
+              letterSpacing: '0.5px',
               textTransform: 'uppercase',
               lineHeight: 1.05,
               willChange: 'transform',
             }}
           >
-            {clean(w.word)}
+            {cleanWord}
           </span>
         );
       })}

@@ -177,10 +177,10 @@ def run_short_audio(short_script_data):
 
         time_offset += actual_duration
 
-    # Concat all chunks with ffmpeg
+    # Concat all chunks with ffmpeg — only current param hash (avoid stale mixed audio)
     raw_audio_path = str(MEDIA_DIR / "short_narration_raw.mp3")
     audio_path = str(MEDIA_DIR / "short_narration.mp3")
-    chunk_files = sorted(SHORT_CHUNKS_DIR.glob("chunk_*.mp3"))
+    chunk_files = sorted(SHORT_CHUNKS_DIR.glob(f"chunk_*_{_param_hash}.mp3"))
     if not chunk_files:
         raise ValueError("[Short Audio] No audio chunks generated — script may be empty or TTS failed for all chunks")
     elif len(chunk_files) == 1:
@@ -212,6 +212,29 @@ def run_short_audio(short_script_data):
     except Exception as e:
         logger.warning(f"[Short Audio] Mastering failed ({e}), using raw audio")
         shutil.copy2(raw_audio_path, audio_path)
+
+    # ── Hard-cap audio file at 58s (YouTube Shorts 60s limit - 2s buffer) ──
+    # The metadata truncation in run_short_convert only trims JSON, not the
+    # actual audio file — Remotion still renders the full-length audio.
+    _SHORT_AUDIO_MAX = 58.0
+    try:
+        from mutagen.mp3 import MP3
+        _actual_len = MP3(audio_path).info.length
+        if _actual_len > _SHORT_AUDIO_MAX:
+            logger.warning(f"[Short Audio] Audio {_actual_len:.1f}s exceeds {_SHORT_AUDIO_MAX}s — truncating with ffmpeg")
+            _trunc_tmp = str(MEDIA_DIR / "short_narration_truncated.mp3")
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", audio_path, "-t", str(_SHORT_AUDIO_MAX),
+                 "-acodec", "copy", _trunc_tmp],
+                check=True, capture_output=True,
+            )
+            shutil.move(_trunc_tmp, audio_path)
+            # Trim word timestamps that fall beyond the cap
+            all_words = [w for w in all_words if w["start"] < _SHORT_AUDIO_MAX]
+            time_offset = _SHORT_AUDIO_MAX
+            logger.info(f"[Short Audio] Truncated audio to {_SHORT_AUDIO_MAX}s")
+    except Exception as trunc_err:
+        logger.warning(f"[Short Audio] Audio truncation failed ({trunc_err}), proceeding with original")
 
     ts_path = str(MEDIA_DIR / "short_timestamps.json")
     with open(ts_path, "w") as f:
@@ -375,15 +398,25 @@ def run_short_convert(short_storyboard_data, short_audio_data):
     if remotion_scenes:
         remotion_scenes[-1]["end_time"] = total_duration
 
-    # Select background music — music manager first, local fallback
+    # Select background music — Epidemic API first, then local manager, then hardcoded fallback
     short_music_file = None
     try:
-        from media import music_manager
-        short_music_file = music_manager.get_music_for_video(remotion_scenes, total_duration)
-        if short_music_file:
-            logger.info(f"[Short Convert] Background music: {short_music_file}")
-    except Exception as _music_err:
-        logger.warning(f"[Short Convert] Music manager unavailable: {_music_err}")
+        from media import epidemic_music_manager
+        epi_result = epidemic_music_manager.search_for_video(remotion_scenes, total_duration)
+        if epi_result and epi_result.get("music_file"):
+            short_music_file = epi_result["music_file"]
+            logger.info(f"[Short Convert] Background music (Epidemic API): {short_music_file}")
+    except Exception as _epi_err:
+        logger.debug(f"[Short Convert] Epidemic music unavailable: {_epi_err}")
+
+    if not short_music_file:
+        try:
+            from media import music_manager
+            short_music_file = music_manager.get_music_for_video(remotion_scenes, total_duration)
+            if short_music_file:
+                logger.info(f"[Short Convert] Background music (local): {short_music_file}")
+        except Exception as _music_err:
+            logger.warning(f"[Short Convert] Music manager unavailable: {_music_err}")
 
     if not short_music_file:
         mood_counts = {}
@@ -407,6 +440,43 @@ def run_short_convert(short_storyboard_data, short_audio_data):
             logger.info(f"[Short Convert] Background music (local): {short_music_file}")
         else:
             logger.warning("[Short Convert] No background music found")
+
+    # ── Validate word timestamps (defense in depth) ──
+    _valid_words = []
+    for w in words:
+        word_text = (w.get("word", "") or "").strip()
+        if not word_text:
+            continue
+        _ws = w.get("start", 0)
+        _we = w.get("end", 0)
+        if _we <= _ws:
+            _we = _ws + 0.1
+        if _ws < 0:
+            _ws = 0
+        _valid_words.append({"word": word_text, "start": _ws, "end": _we})
+    if len(_valid_words) < len(words):
+        logger.warning(f"[Short Convert] Cleaned {len(words) - len(_valid_words)} invalid word timestamps")
+    words = _valid_words
+
+    # ── Hook breathing room — delay narration to match BREATH_FRAMES ──
+    # ShortVideo.tsx delays audio playback by BREATH_FRAMES=45 frames (1.5s at 30fps).
+    # Word timestamps must be shifted by the same amount so captions stay in sync.
+    _HOOK_BUFFER = 1.5  # 45 frames / 30 fps
+    for w in words:
+        w["start"] = w["start"] + _HOOK_BUFFER
+        w["end"] = w["end"] + _HOOK_BUFFER
+    total_duration += _HOOK_BUFFER
+
+    # ── Hard cap Short duration at 58s (60s YouTube limit - 2s buffer) ──
+    _SHORT_MAX_DURATION = 58.0
+    if total_duration > _SHORT_MAX_DURATION:
+        logger.warning(f"[Short Convert] Duration {total_duration:.1f}s exceeds {_SHORT_MAX_DURATION}s cap — truncating")
+        words = [w for w in words if w.get("start", 0) < _SHORT_MAX_DURATION]
+        for s in remotion_scenes:
+            if s.get("end_time", 0) > _SHORT_MAX_DURATION:
+                s["end_time"] = _SHORT_MAX_DURATION
+        remotion_scenes = [s for s in remotion_scenes if s.get("start_time", 0) < _SHORT_MAX_DURATION]
+        total_duration = _SHORT_MAX_DURATION
 
     short_data = {
         "total_duration_seconds": total_duration,

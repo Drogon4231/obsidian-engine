@@ -26,6 +26,9 @@ def validate_stage_output(stage_num, data):
     # Stages 11 (convert) and 12 (render) return strings (paths), not dicts
     if stage_num in (11, 12) and isinstance(data, str) and data:
         return True
+    # Stage 11 can also return a dict with scenes + total_duration_seconds
+    if stage_num == 11 and isinstance(data, dict):
+        return bool(data.get("scenes") and data.get("total_duration_seconds"))
     # Stage 13 (upload) returns dict with video_id
     if stage_num == 13 and isinstance(data, dict) and data.get("video_id"):
         return True

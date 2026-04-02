@@ -10,6 +10,7 @@ Caches by mood per pipeline run to avoid redundant API calls.
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 
 from core.log import get_logger
@@ -74,10 +75,69 @@ AMBIENT_QUERY_MAP = {
     "absurdity": "carnival fairground quirky ambient",
 }
 
+# ── Era/cultural negative keywords (exclude anachronistic SFX) ───────────────
+# Same pattern as ERA_CONSTRAINTS in pipeline/images.py — prevents modern/wrong-era
+# sound effects from appearing in historical documentaries.
+
+_ERA_SFX_FILTERS: dict[str, dict] = {
+    "ancient": {
+        "keywords": ["roman", "greek", "egypt", "pharaoh", "sparta", "athens",
+                     "caesar", "gladiator", "maurya", "ashoka", "chandragupta",
+                     "ancient", "bronze age", "iron age"],
+        "negative": ["-scifi", "-electronic", "-digital", "-synth", "-robot",
+                     "-cyberpunk", "-laser", "-glitch", "-computer", "-8bit",
+                     "-pixel", "-motor", "-engine", "-car", "-gun", "-gunshot"],
+    },
+    "medieval": {
+        "keywords": ["medieval", "crusade", "knight", "castle", "feudal",
+                     "viking", "monastery", "plague", "middle ages",
+                     "byzantine", "ottoman", "sultan"],
+        "negative": ["-scifi", "-electronic", "-digital", "-synth", "-robot",
+                     "-cyberpunk", "-laser", "-glitch", "-computer", "-8bit",
+                     "-motor", "-engine", "-car", "-gun"],
+    },
+    "mughal": {
+        "keywords": ["mughal", "akbar", "shah jahan", "taj mahal", "aurangzeb",
+                     "delhi sultanate", "vijayanagara", "hampi", "nayaka"],
+        "negative": ["-scifi", "-electronic", "-digital", "-synth", "-robot",
+                     "-cyberpunk", "-laser", "-glitch", "-computer", "-8bit",
+                     "-motor", "-engine", "-western", "-cowboy"],
+    },
+    "colonial": {
+        "keywords": ["colonial", "empire", "plantation", "east india company",
+                     "conquest", "slavery", "revolution"],
+        "negative": ["-scifi", "-electronic", "-digital", "-synth", "-robot",
+                     "-cyberpunk", "-laser", "-glitch", "-computer", "-8bit"],
+    },
+}
+
+# Compiled flat topic string -> detected era, cached per pipeline run
+_detected_era_cache: dict[str, list[str]] = {}
+
+
+def _get_era_negative_keywords(topic: str) -> str:
+    """Return space-joined negative keywords if the topic matches a known era."""
+    topic_lower = topic.lower()
+    if topic_lower in _detected_era_cache:
+        return " ".join(_detected_era_cache[topic_lower])
+
+    negatives: list[str] = []
+    for _era_name, era_info in _ERA_SFX_FILTERS.items():
+        if any(kw in topic_lower for kw in era_info["keywords"]):
+            negatives.extend(era_info["negative"])
+            break  # One era match is enough
+
+    _detected_era_cache[topic_lower] = negatives
+    return " ".join(negatives)
+
+
 # ── Session cache (avoid re-downloading same mood per pipeline run) ───────────
 
 _sfx_cache: dict[str, str] = {}
 _ambient_cache: dict[str, str] = {}
+
+_sfx_rotation_lock = threading.Lock()
+_sfx_rotation_counts: dict[str, int] = {}
 
 
 def clear_session_cache():
@@ -92,37 +152,50 @@ def _get_client():
     return EpidemicSoundClient()
 
 
-def _build_sfx_query(scene: dict) -> str:
-    """Build a search query from scene attributes."""
+def _build_sfx_query(scene: dict, topic: str = "") -> str:
+    """Build a search query from scene attributes.
+
+    If *topic* matches a known historical era, anachronistic SFX keywords
+    (e.g., ``-scifi -electronic``) are appended as negative filters.
+    """
     mood = scene.get("mood", "dark").lower()
     narrative_fn = scene.get("narrative_function", "")
     transition = scene.get("intent_transition_type", "")
 
     # Try specific (mood, function) combo first
+    query = None
     for fn_key in (narrative_fn, transition):
         query = SFX_QUERY_MAP.get((mood, fn_key))
         if query:
-            return query
+            break
 
     # If reveal moment, use reveal combo
-    if scene.get("is_reveal_moment"):
+    if not query and scene.get("is_reveal_moment"):
         query = SFX_QUERY_MAP.get((mood, "reveal"))
-        if query:
-            return query
 
     # Fallback: mood-only
-    return SFX_MOOD_FALLBACK.get(mood, "cinematic hit impact")
+    if not query:
+        query = SFX_MOOD_FALLBACK.get(mood, "cinematic hit impact")
+
+    # Append era-based negative keywords to filter anachronistic SFX
+    if topic:
+        era_negatives = _get_era_negative_keywords(topic)
+        if era_negatives:
+            query = f"{query} {era_negatives}"
+
+    return query
 
 
-def get_sfx_for_scene(scene: dict) -> str | None:
+def get_sfx_for_scene(scene: dict, topic: str = "") -> str | None:
     """Search Epidemic Sound for an SFX matching the scene context.
 
     Returns path relative to remotion/public/ (e.g., "sfx/epidemic_sfx_abc.mp3") or None.
+    *topic* is forwarded to ``_build_sfx_query`` for era/cultural SFX filtering.
     """
     if not os.getenv("EPIDEMIC_SOUND_API_KEY"):
         return None
 
-    query = _build_sfx_query(scene)
+    query = _build_sfx_query(scene, topic=topic)
     scene_idx = scene.get("scene_id", scene.get("scene_index", 0))
     cache_key = f"{query}__scene{scene_idx}"  # Per-scene cache key for SFX variety
 
@@ -136,11 +209,10 @@ def get_sfx_for_scene(scene: dict) -> str | None:
             return None
 
         # Rotate through results to avoid same SFX on every scene
-        _query_usage = getattr(get_sfx_for_scene, '_query_usage', {})
-        usage_count = _query_usage.get(query, 0)
-        sfx = results[usage_count % len(results)]
-        _query_usage[query] = usage_count + 1
-        get_sfx_for_scene._query_usage = _query_usage
+        with _sfx_rotation_lock:
+            usage_count = _sfx_rotation_counts.get(query, 0)
+            sfx = results[usage_count % len(results)]
+            _sfx_rotation_counts[query] = usage_count + 1
         sfx_id = str(sfx.get("id", ""))
         title = sfx.get("title", "unknown")
 

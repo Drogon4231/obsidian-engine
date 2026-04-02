@@ -7,6 +7,8 @@ import shortVideoData from './short-video-data.json';
 export const RemotionRoot = () => {
   const fps = 30;
   const durationInFrames      = Math.max(24, Math.ceil((videoData.total_duration_seconds || 1) * fps) + END_SCREEN_DURATION_SEC * fps);
+  // total_duration_seconds in short-video-data.json already includes the 1.5s
+  // breathing room added by run_short_convert — do NOT add it again here.
   const shortDurationInFrames = Math.max(24, Math.ceil((shortVideoData.total_duration_seconds || 1) * fps));
 
   return (

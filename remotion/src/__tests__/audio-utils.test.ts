@@ -8,6 +8,7 @@ import {
   ambientVolume,
   primaryMusicVolume,
   secondaryMusicVolume,
+  silenceBeatVolume,
   type WordTimestamp,
 } from '../audio-utils';
 
@@ -252,5 +253,57 @@ describe('secondaryMusicVolume', () => {
     // Frame 2400 = 80s, progress = 0.8 — after crossfade
     const vol = secondaryMusicVolume(2400, 30, 100, mask);
     expect(vol).toBeGreaterThan(0);
+  });
+});
+
+// ── silenceBeatVolume ─────────────────────────────────────────────────────
+
+describe('silenceBeatVolume', () => {
+  const scene = { start_time: 10, end_time: 20 }; // 10s scene
+  const normalVol = 0.30;
+  const floor = 0.02;
+
+  it('ramps down at scene start (not instant)', () => {
+    // At 0.5s into a 10s scene: inside entry ramp (1.5s default)
+    const vol = silenceBeatVolume(10.5, scene, normalVol, floor);
+    expect(vol).toBeGreaterThan(floor);
+    expect(vol).toBeLessThan(normalVol);
+  });
+
+  it('reaches floor at scene midpoint', () => {
+    // At 5s into a 10s scene: well past entry ramp, before exit ramp
+    const vol = silenceBeatVolume(15, scene, normalVol, floor);
+    expect(vol).toBe(floor);
+  });
+
+  it('ramps up before scene end (not instant)', () => {
+    // At 1.0s before scene end: inside exit ramp (2.0s default)
+    const vol = silenceBeatVolume(19, scene, normalVol, floor);
+    expect(vol).toBeGreaterThan(floor);
+    expect(vol).toBeLessThan(normalVol);
+  });
+
+  it('handles short scenes by shortening ramps', () => {
+    const shortScene = { start_time: 50, end_time: 54 }; // 4s scene
+    // effectiveEntry = min(1.5, max(0.3, (4-2)/2)) = 1.0s
+    // effectiveExit  = max(3.0, ...) = 3.0s (minimum exit ramp)
+    // At 0.5s in: inside entry ramp
+    const vol = silenceBeatVolume(50.5, shortScene, normalVol, floor);
+    expect(vol).toBeGreaterThan(floor);
+    expect(vol).toBeLessThan(normalVol);
+    // At midpoint (t=52): entry ramp ended (1.0s) but exit ramp active
+    // (timeUntilEnd=2 < effectiveExit=3.0), so vol > floor
+    const midVol = silenceBeatVolume(52, shortScene, normalVol, floor);
+    expect(midVol).toBeGreaterThanOrEqual(floor);
+    expect(midVol).toBeLessThan(normalVol);
+  });
+
+  it('uses cosine curve (not linear)', () => {
+    // At t=0 of entry ramp: cos(0) = 1.0, so volume = normalVol
+    const volAtStart = silenceBeatVolume(10.001, scene, normalVol, floor);
+    expect(volAtStart).toBeCloseTo(normalVol, 1);
+    // At t=1 of entry ramp (1.5s): cos(pi/2) = 0, so volume = floor
+    const volAtEnd = silenceBeatVolume(11.5, scene, normalVol, floor);
+    expect(volAtEnd).toBeCloseTo(floor, 1);
   });
 });

@@ -292,6 +292,8 @@ SCENE_BREAKDOWN_SCHEMA = {
                             {"type": "null"},
                         ],
                     },
+                    "era_start": {"type": "string"},
+                    "era_end": {"type": "string"},
                 },
                 "required": [
                     "scene_id", "narration", "duration_seconds",
@@ -301,7 +303,7 @@ SCENE_BREAKDOWN_SCHEMA = {
                     "show_map", "show_timeline", "lower_third",
                     "key_text", "key_text_type", "retention_hook",
                     "visual_treatment", "is_breathing_room",
-                    "narrative_function",
+                    "narrative_function", "claim_confidence",
                 ],
                 "additionalProperties": False,
             },

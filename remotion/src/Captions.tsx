@@ -87,7 +87,7 @@ export const Captions: React.FC<{
     w => globalTime >= w.start && globalTime < w.end
   );
 
-  const clean = (w: string) => w.replace(/[^\p{L}\p{M}\p{N} '''.,!?;\u2014-]/gu, '');
+  const clean = (w: string) => w.replace(/[^\p{L}\p{M}\p{N} '''.,!?;]/gu, '');
 
   return (
     <div style={{
@@ -134,6 +134,7 @@ export const Captions: React.FC<{
           }) : 1;
           // Emphasis detection: em-dashes, all-caps words, or numbers get special treatment
           const cleanWord = clean(w.word);
+          if (!cleanWord.trim()) return null;
           const isEmphasis = /^\d{3,4}$/.test(cleanWord) || (cleanWord === cleanWord.toUpperCase() && cleanWord.length > 2);
           const emphasisScale = isEmphasis && isActive ? 1.15 : 1;
           // Frame-based color transition (3 frames ≈ 0.1s at 30fps)
@@ -175,7 +176,7 @@ export const Captions: React.FC<{
               display: 'inline-block',
               transform: `scale(${wordScale * emphasisScale})`,
             }}>
-              {clean(w.word)}
+              {cleanWord}
             </span>
           );
         })}

@@ -1,3 +1,4 @@
+import {useMemo} from 'react';
 import {useCurrentFrame} from 'remotion';
 
 /**
@@ -10,11 +11,16 @@ interface FilmGrainProps {
   vignetteIntensity?: number; // 0.0-0.4, controls vignette darkness (default 0.15)
 }
 
+let _grainInstanceCounter = 0;
+
 export const FilmGrain: React.FC<FilmGrainProps> = ({
   intensity = 0.1,
   vignetteIntensity = 0.15,
 }) => {
   const frame = useCurrentFrame();
+  // Stable unique ID per component instance — avoids SVG filter ID collisions
+  // when multiple FilmGrain components coexist (e.g. during L-cut/J-cut overlaps)
+  const filterId = useMemo(() => `grain-${++_grainInstanceCounter}`, []);
   // Shift the noise seed every 6 frames (~5Hz at 30fps) for subtle grain without excess CPU
   const seed = Math.floor(frame / 6);
   // Clamp values to safe ranges
@@ -34,7 +40,7 @@ export const FilmGrain: React.FC<FilmGrainProps> = ({
         mixBlendMode: 'overlay',
       }}>
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <filter id="grain">
+          <filter id={filterId}>
             <feTurbulence
               type="fractalNoise"
               baseFrequency="0.75"
@@ -44,7 +50,7 @@ export const FilmGrain: React.FC<FilmGrainProps> = ({
             />
             <feColorMatrix type="saturate" values="0" />
           </filter>
-          <rect width="100%" height="100%" filter="url(#grain)" />
+          <rect width="100%" height="100%" filter={`url(#${filterId})`} />
         </svg>
       </div>
       )}

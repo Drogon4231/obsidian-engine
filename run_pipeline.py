@@ -71,7 +71,27 @@ from pipeline.phase_post import run_post_phase
 from pipeline.runner import StageRunner
 
 
+def _validate_topic(topic: str) -> None:
+    """Reject obviously invalid topics before pipeline runs.
+
+    Validates at pipeline entry -- not at scheduler queue time -- to catch
+    both scheduled and manual invocations.
+    """
+    if not topic or not topic.strip():
+        raise ValueError("[Pipeline] Topic is empty or whitespace-only. Aborting.")
+    stripped = topic.strip()
+    if stripped.upper().startswith("ERROR"):
+        raise ValueError(f"[Pipeline] Topic looks like an error message: '{stripped}'. Aborting.")
+    if stripped.startswith("-") or stripped.startswith("--"):
+        raise ValueError(f"[Pipeline] Topic looks like a CLI flag: '{stripped}'. Aborting.")
+    if len(stripped) < 5:
+        raise ValueError(f"[Pipeline] Topic too short ({len(stripped)} chars): '{stripped}'. Aborting.")
+    if "no topic submitted" in stripped.lower():
+        raise ValueError(f"[Pipeline] Topic contains 'no topic submitted': '{stripped}'. Aborting.")
+
+
 def run_pipeline(topic, resume=False, from_stage=1, is_experiment=False, series_meta=None):
+    _validate_topic(topic)
     ctx = init_context(topic, resume, from_stage, is_experiment, series_meta=series_meta)
     register_crash_handlers(ctx)
     notify_start(ctx)

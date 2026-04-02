@@ -347,13 +347,19 @@ def call_claude_with_search(
     Call Claude with web search tool enabled.
     Returns the full text response (search results embedded).
     """
+    # Wrap long system prompts with cache_control for prompt caching
+    if len(system_prompt) > 1000:
+        system_param = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
+    else:
+        system_param = system_prompt
+
     last_err = None
     for attempt in range(5):
         try:
             create_kwargs = dict(
                 model=model,
                 max_tokens=max_tokens,
-                system=system_prompt,
+                system=system_param,
                 tools=[{"type": "web_search_20250305", "name": "web_search"}],
                 messages=[{"role": "user", "content": user_prompt}],
             )

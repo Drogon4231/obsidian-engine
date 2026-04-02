@@ -32,7 +32,10 @@ def _make_ctx(tmp_path=None, **overrides) -> PipelineContext:
 def _make_runner(ctx: PipelineContext) -> StageRunner:
     runner = StageRunner(ctx)
     runner.mark = MagicMock()
-    runner.mark_metadata = MagicMock()
+    # mark_metadata must actually write to ctx.state for tests that check state contents
+    def _mock_mark_metadata(key, value):
+        ctx.state[key] = value
+    runner.mark_metadata = MagicMock(side_effect=_mock_mark_metadata)
     runner.done = MagicMock(return_value=False)
     return runner
 
@@ -178,8 +181,7 @@ class TestBuildManifest:
         from pipeline.phase_prod import _build_manifest
         _build_manifest(ctx, runner)
 
-    @patch("pipeline.phase_prod.save_state")
-    def test_builds_manifest_when_not_done(self, mock_save, tmp_path):
+    def test_builds_manifest_when_not_done(self, tmp_path):
         media_dir = tmp_path / "media"
         media_dir.mkdir()
 
@@ -276,8 +278,7 @@ class TestRunQaTiers:
         from pipeline.phase_prod import _run_qa_tiers
         _run_qa_tiers(ctx, runner)
 
-    @patch("pipeline.phase_prod.save_state")
-    def test_tier1_passes(self, mock_save, capsys):
+    def test_tier1_passes(self, capsys):
         t1_result = {"passed": True, "errors": [], "warnings": [], "metrics": {}}
         t2_result = {"passed": True, "warnings": [], "sync_score": 0.95}
         fake_qg = _fake_module(
@@ -293,8 +294,7 @@ class TestRunQaTiers:
         assert ctx.state["qa_tier1"] == t1_result
         assert "Post-render validation passed" in capsys.readouterr().out
 
-    @patch("pipeline.phase_prod.save_state")
-    def test_tier1_fails_prints_errors(self, mock_save, capsys):
+    def test_tier1_fails_prints_errors(self, capsys):
         t1_result = {
             "passed": False,
             "errors": ["Duration mismatch"],
@@ -317,8 +317,7 @@ class TestRunQaTiers:
         assert "Duration mismatch" in out
         assert "Low bitrate" in out
 
-    @patch("pipeline.phase_prod.save_state")
-    def test_tier2_passes_prints_sync(self, mock_save, capsys):
+    def test_tier2_passes_prints_sync(self, capsys):
         t1_result = {"passed": True, "errors": [], "warnings": [], "metrics": {}}
         t2_result = {"passed": True, "warnings": [], "sync_score": 0.95}
         fake_qg = _fake_module(

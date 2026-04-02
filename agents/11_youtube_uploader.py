@@ -680,6 +680,72 @@ def generate_thumbnail(manifest):
     print(f"[YouTube] Thumbnail saved: {thumb_path.name}")
     return str(thumb_path)
 
+def _upload_captions(youtube, video_id: str, ctx) -> None:
+    """Generate SRT from word timestamps and upload as English captions via YouTube API."""
+    try:
+        # Extract word_timestamps from ctx.state
+        _state = getattr(ctx, "state", None) if ctx is not None else None
+        if not _state:
+            print("[YouTube] Captions: no pipeline state available — skipping")
+            return
+
+        word_timestamps = _state.get("word_timestamps", [])
+        if not word_timestamps:
+            stage_11 = _state.get("stage_11", {})
+            if isinstance(stage_11, dict):
+                word_timestamps = stage_11.get("word_timestamps", [])
+        if not word_timestamps:
+            audio_data = _state.get("audio_data", {})
+            if isinstance(audio_data, dict):
+                word_timestamps = audio_data.get("word_timestamps", [])
+        if not word_timestamps:
+            # Last resort: read timestamps.json directly from disk
+            try:
+                _ts_path = Path(__file__).resolve().parent.parent / "outputs" / "media" / "timestamps.json"
+                if _ts_path.exists():
+                    word_timestamps = json.loads(_ts_path.read_text()).get("words", [])
+                    if word_timestamps:
+                        print(f"[YouTube] Captions: loaded {len(word_timestamps)} words from timestamps.json")
+            except Exception:
+                pass
+
+        if not word_timestamps:
+            print("[YouTube] Captions: no word_timestamps found — skipping SRT upload")
+            return
+
+        # Generate SRT file
+        from media.localization_pipeline import generate_srt
+        srt_dir = Path(__file__).resolve().parent.parent / "outputs" / "captions"
+        srt_dir.mkdir(parents=True, exist_ok=True)
+        srt_path = str(srt_dir / f"{video_id}_en.srt")
+        generate_srt(word_timestamps, srt_path)
+
+        if not Path(srt_path).exists() or Path(srt_path).stat().st_size < 10:
+            print("[YouTube] Captions: SRT file empty or missing after generation — skipping")
+            return
+
+        # Upload via YouTube Data API captions.insert()
+        from googleapiclient.http import MediaFileUpload
+        caption_body = {
+            "snippet": {
+                "videoId": video_id,
+                "language": "en",
+                "name": "English",
+                "isDraft": False,
+            }
+        }
+        media = MediaFileUpload(srt_path, mimetype="application/x-subrip")
+        youtube.captions().insert(
+            part="snippet",
+            body=caption_body,
+            media_body=media,
+        ).execute()
+        print(f"[YouTube] Captions uploaded: {Path(srt_path).name}")
+
+    except Exception as e:
+        print(f"[YouTube] Captions upload failed (non-critical): {e}")
+
+
 def _sanitize_tags(raw_tags: list) -> list:
     """
     Clean tags to meet YouTube API requirements:
@@ -741,12 +807,6 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
             "categoryId":  "24",  # Entertainment (documentary/history content)
             "defaultLanguage": "en",
         },
-        "localizations": {
-            "hi": {
-                "title": title[:100],
-                "description": description[:5000],
-            },
-        },
         "status": {
             "privacyStatus":          privacy,
             "selfDeclaredMadeForKids": False,
@@ -762,7 +822,7 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
     )
 
     request = youtube.videos().insert(
-        part="snippet,status,localizations",
+        part="snippet,status",
         body=body,
         media_body=media
     )
@@ -787,7 +847,7 @@ def upload_video(video_path, title, description, tags, thumbnail_path=None, priv
                 chunksize=50 * 1024 * 1024
             )
             request = youtube.videos().insert(
-                part="snippet,status,localizations",
+                part="snippet,status",
                 body=body,
                 media_body=media
             )

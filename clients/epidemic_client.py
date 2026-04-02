@@ -50,6 +50,7 @@ class EpidemicSoundClient:
         "edit_recording": "EditRecording",
         "poll_edit_recording": "PollEditRecordingJob",
         "download_recording_edit": "DownloadRecordingEdit",
+        "search_external_track": "SearchExternalTrack",
     }
 
     def __init__(self, api_key: str | None = None):

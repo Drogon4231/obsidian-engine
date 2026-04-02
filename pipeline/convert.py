@@ -78,6 +78,10 @@ def run_convert(manifest, audio_data, topic="", era=""):
         with open(ts_file) as f:
             ts = json.load(f)
         words = ts.get("words", [])
+        # Filter standalone em-dashes and typographic punctuation that appear as
+        # separate caption words (AI-revealing artifact fix)
+        _PUNCT_ONLY = re.compile(r'^[\u2014\u2013\u2012\u2015\u2010\-\u2026]+$')
+        words = [w for w in words if not _PUNCT_ONLY.match(w.get("word", "").strip())]
         scene_word_ranges = ts.get("scene_word_ranges")  # From scene-aware audio
     else:
         logger.warning("[Convert] ⚠️  timestamps.json not found — scenes will use even spacing")
@@ -393,6 +397,47 @@ def run_convert(manifest, audio_data, topic="", era=""):
         logger.info(f"[Convert] ✓ Scene intents resolved for {len(remotion_scenes)} scenes")
     except Exception as e:
         logger.warning(f"[Convert] Scene intent resolution skipped (non-fatal): {e}")
+
+    # Post-resolve: enforce Invariant 17 — silence beat hard constraint.
+    # Suppress all audio and clamp music volume on silence beat scenes and their follower.
+    for i, sc in enumerate(remotion_scenes):
+        if sc.get("intent_silence_beat"):
+            sc["sfx_file"] = None
+            sc["sfx_volume"] = 0
+            sc["ambient_file"] = None
+            sc["intent_music_volume_base"] = min(sc.get("intent_music_volume_base", 0.5), 0.50)
+            # Clamp the immediately following scene's music volume too (avoids jarring jump)
+            if i + 1 < len(remotion_scenes):
+                following = remotion_scenes[i + 1]
+                following["intent_music_volume_base"] = min(
+                    following.get("intent_music_volume_base", 0.5), 0.50
+                )
+
+    # Post-resolve: speech intensity delta cap.
+    # Clamp scene-to-scene speech intensity jumps to <=0.25 to prevent jarring voice shifts.
+    for i in range(1, len(remotion_scenes)):
+        prev_intensity = remotion_scenes[i - 1].get("intent_speech_intensity", 0.5)
+        curr_intensity = remotion_scenes[i].get("intent_speech_intensity", 0.5)
+        delta = curr_intensity - prev_intensity
+        if abs(delta) > 0.25:
+            clamped = prev_intensity + 0.25 * (1 if delta > 0 else -1)
+            logger.warning(
+                f"[Convert] Speech intensity delta capped: scene {i} "
+                f"{curr_intensity:.2f}->{clamped:.2f} (delta={delta:+.2f})"
+            )
+            remotion_scenes[i]["intent_speech_intensity"] = round(clamped, 3)
+
+    # Pacing audit: warn on non-exempt scenes below 25s documentary target
+    # Must run AFTER resolve_all_scenes() so intent_silence_beat is populated.
+    _EXEMPT_FUNCTIONS = {"cold_open", "hook", "silence", "breathing_room"}
+    for _i, _sc in enumerate(remotion_scenes):
+        _dur = _sc["end_time"] - _sc["start_time"]
+        _fn = _sc.get("narrative_function", "")
+        _is_silence = _sc.get("intent_silence_beat", False) or _sc.get("is_breathing_room", False)
+        if _dur < 25.0 and _fn not in _EXEMPT_FUNCTIONS and not _is_silence:
+            logger.warning(
+                f"[Pacing] Scene {_i} ({_fn}) is {_dur:.1f}s — below 25s documentary target"
+            )
 
     # Inject synthetic reflection scene at act3→ending boundary
     try:

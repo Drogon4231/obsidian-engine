@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from core.paths import OUTPUT_DIR, MEDIA_DIR, REMOTION_PUBLIC
-from pipeline.state import save_state
 from pipeline.validators import check_seo, check_scenes, check_audio
 from pipeline.helpers import clean_script
 from pipeline.audio import run_audio
@@ -304,8 +303,8 @@ def _run_wave1(ctx: PipelineContext, runner: StageRunner) -> None:
     if ctx.seo and not ctx.state.get("seo_title_b"):
         variants = ctx.seo.get("title_variants", [])
         if isinstance(variants, list) and len(variants) > 1:
-            ctx.state["seo_title_b"] = variants[1].get("title", "") if isinstance(variants[1], dict) else str(variants[1])
-            save_state(ctx.state, ctx.state_path)
+            runner.mark_metadata("seo_title_b",
+                variants[1].get("title", "") if isinstance(variants[1], dict) else str(variants[1]))
             logger.info(f"[Pipeline] A/B title B stored: {ctx.state['seo_title_b'][:60]}")
 
     if ctx.script and not ctx.state.get("script_path"):
@@ -315,8 +314,7 @@ def _run_wave1(ctx: PipelineContext, runner: StageRunner) -> None:
             f.write(f"Title: {ctx.seo.get('recommended_title', ctx.topic) if ctx.seo else ctx.topic}\n\n")
             f.write(ctx.script.get("full_script", ""))
         logger.info(f"[Pipeline] Script saved: {final_script_path.name}")
-        ctx.state["script_path"] = str(final_script_path)
-        save_state(ctx.state, ctx.state_path)
+        runner.mark_metadata("script_path", str(final_script_path))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -462,8 +460,7 @@ def _build_manifest(ctx: PipelineContext, runner: StageRunner) -> None:
             ctx.manifest["visual_bible"] = ctx.scenes_data["visual_bible"]
         with open(MEDIA_DIR / "media_manifest.json", "w") as f:
             json.dump(ctx.manifest, f, indent=2)
-        ctx.state["manifest"] = ctx.manifest
-        save_state(ctx.state, ctx.state_path)
+        runner.mark_metadata("manifest", ctx.manifest)
     else:
         if (MEDIA_DIR / "media_manifest.json").exists():
             with open(MEDIA_DIR / "media_manifest.json") as f:
@@ -549,8 +546,7 @@ def _run_qa_tiers(ctx: PipelineContext, runner: StageRunner) -> None:
             logger.info(f"[QA Tier 1] Metrics: {json.dumps(t1['metrics'])}")
         if t1["passed"]:
             logger.info("[QA Tier 1] Post-render validation passed.")
-        ctx.state["qa_tier1"] = t1
-        save_state(ctx.state, ctx.state_path)
+        runner.mark_metadata("qa_tier1", t1)
     except ImportError:
         pass
     except Exception as t1_err:
@@ -567,8 +563,7 @@ def _run_qa_tiers(ctx: PipelineContext, runner: StageRunner) -> None:
             for w in t2["warnings"]:
                 logger.warning(f"  \u26a0 {w}")
         logger.info(f"[QA Tier 2] Sync score: {t2['sync_score']*100:.0f}% \u2014 {'PASSED' if t2['passed'] else 'BELOW THRESHOLD'}")
-        ctx.state["qa_tier2"] = t2
-        save_state(ctx.state, ctx.state_path)
+        runner.mark_metadata("qa_tier2", t2)
     except ImportError:
         pass
     except Exception as t2_err:

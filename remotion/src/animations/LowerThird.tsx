@@ -18,14 +18,15 @@ export const LowerThird: React.FC<Props> = ({name, title, duration}) => {
   const barHeight = interpolate(frame, [fps * 0.1, fps * 0.4], [0, 56],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
-  // Name slides in with spring
+  // Name slides in with spring — lower stiffness for smoother, more cinematic entrance
   const nameSpring = spring({frame: Math.max(0, frame - Math.floor(fps * 0.25)), fps,
-    config: {damping: 16, stiffness: 120, mass: 0.7}});
+    config: {damping: 16, stiffness: 80, mass: 0.7}});
   const nameSlide = interpolate(nameSpring, [0, 1], [-50, 0]);
+  const nameScale = interpolate(nameSpring, [0, 1], [0.96, 1.0]);
 
   // Title slides in delayed
   const titleSpring = spring({frame: Math.max(0, frame - Math.floor(fps * 0.4)), fps,
-    config: {damping: 16, stiffness: 120, mass: 0.7}});
+    config: {damping: 16, stiffness: 80, mass: 0.7}});
   const titleSlide = interpolate(titleSpring, [0, 1], [-30, 0]);
 
   // Fade out near end of duration (last 0.5s), with fallback to 4s hold
@@ -79,12 +80,12 @@ export const LowerThird: React.FC<Props> = ({name, title, duration}) => {
         <div style={{
           color: '#f0e8d8',
           fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-          fontSize: 30,
+          fontSize: 34,
           fontWeight: 800,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
           textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 30px rgba(0,0,0,0.5)',
-          transform: `translateX(${nameSlide}px)`,
+          transform: `translateX(${nameSlide}px) scale(${nameScale})`,
           opacity: nameSpring,
         }}>
           {name}

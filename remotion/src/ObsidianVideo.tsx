@@ -330,7 +330,7 @@ const SceneContent: React.FC<{
 };
 
 // ── End screen (20-second CTA) ─────────────────────────────────────────────────
-export const END_SCREEN_DURATION_SEC = 12;
+export const END_SCREEN_DURATION_SEC = 25;
 
 const EndScreen: React.FC<{durationFrames: number; lastSceneImage?: string}> = ({durationFrames, lastSceneImage}) => {
   const frame = useCurrentFrame();

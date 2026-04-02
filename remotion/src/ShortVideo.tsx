@@ -76,8 +76,8 @@ const ShortSceneContent: React.FC<{
 
   return (
     <AbsoluteFill style={{opacity, backgroundColor: bg}}>
-      {/* Background: full-bleed portrait AI image */}
-      {scene.ai_image && (
+      {/* Background: full-bleed portrait AI image, or gradient fallback */}
+      {scene.ai_image ? (
         <AbsoluteFill style={{overflow: 'hidden'}}>
           <Img
             src={staticFile(scene.ai_image)}
@@ -91,6 +91,37 @@ const ShortSceneContent: React.FC<{
               willChange:      'transform',
             }}
           />
+        </AbsoluteFill>
+      ) : (
+        <AbsoluteFill style={{
+          background: `radial-gradient(ellipse at center, ${bg}dd 0%, ${bg} 70%, #000000 100%)`,
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            width:        '80%',
+            height:       '60%',
+            background:   'linear-gradient(135deg, rgba(212,168,85,0.08) 0%, rgba(0,0,0,0) 100%)',
+            borderRadius: 20,
+            border:       '1px solid rgba(212,168,85,0.15)',
+            display:      'flex',
+            alignItems:   'center',
+            justifyContent: 'center',
+            padding:      '24px',
+          }}>
+            <span style={{
+              color:          'rgba(255,255,255,0.6)',
+              fontSize:       36,
+              fontFamily:     '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontWeight:     600,
+              textAlign:      'center',
+              lineHeight:     1.4,
+              textShadow:     '0 2px 10px rgba(0,0,0,0.8)',
+            }}>
+              {scene.narration_segment?.slice(0, 80) ?? ''}
+            </span>
+          </div>
         </AbsoluteFill>
       )}
 
@@ -148,7 +179,8 @@ const ShortSceneContent: React.FC<{
 
 // ── Root Short composition ─────────────────────────────────────────────────────
 export const ShortVideo: React.FC = () => {
-  const {fps} = useVideoConfig();
+  const {fps, durationInFrames} = useVideoConfig();
+  const frame = useCurrentFrame();
   const data  = shortVideoData as ShortVideoData;
   const words: WordTimestamp[] = data.word_timestamps ?? [];
   const narrationMask = buildNarrationMask(words);
@@ -156,20 +188,30 @@ export const ShortVideo: React.FC = () => {
   const speechVol = audioConfig.ducking?.speechVolume ?? 0.12;
   const silenceVol = audioConfig.ducking?.silenceVolume ?? 0.25;
 
+  // 1.5s breathing room at start — delay narration by 45 frames (at 30fps).
+  // Uses Sequence from={BREATH_FRAMES} to actually delay playback start.
+  // (startFrom would TRIM the audio, not delay it.)
+  const BREATH_FRAMES = 45;
+  const breathSec = BREATH_FRAMES / fps;
+
   return (
     <AbsoluteFill style={{backgroundColor: '#08080e'}}>
-      <Audio src={staticFile('short_narration.mp3')} />
+      <Sequence from={BREATH_FRAMES}>
+        <Audio src={staticFile('short_narration.mp3')} />
+      </Sequence>
       {data.music_file && (
         <Audio src={staticFile(data.music_file)} volume={(f) => {
-          const time = f / fps;
+          // Offset time by breath delay so ducking aligns with actual speech
+          const time = Math.max(0, f / fps - breathSec);
           const isSpeaking = distanceToSpeech(time, narrationMask) === 0;
           return isSpeaking ? speechVol : silenceVol;
         }} loop />
       )}
 
       {data.scenes.map((scene, i) => {
-        const startFrame = Math.floor(scene.start_time * fps);
-        const endFrame   = Math.ceil(scene.end_time   * fps);
+        // Offset scene start/end by breath delay to stay in sync with delayed narration
+        const startFrame = Math.floor(scene.start_time * fps) + BREATH_FRAMES;
+        const endFrame   = Math.ceil(scene.end_time   * fps) + BREATH_FRAMES;
         const duration   = endFrame - startFrame;
         if (duration <= 0) return null;
 
@@ -184,6 +226,23 @@ export const ShortVideo: React.FC = () => {
           </Sequence>
         );
       })}
+
+      {/* Visual CTA overlay — appears in last 2s */}
+      {frame >= (durationInFrames - fps * 2) && (
+        <AbsoluteFill style={{justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 180}}>
+          <div style={{
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderRadius: 12,
+            padding: '8px 20px',
+            fontSize: 28,
+            color: '#fff',
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}>
+            Full Story ▶
+          </div>
+        </AbsoluteFill>
+      )}
     </AbsoluteFill>
   );
 };

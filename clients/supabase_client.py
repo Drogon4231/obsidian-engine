@@ -107,6 +107,35 @@ CREATE TABLE IF NOT EXISTS kv_store (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS param_observations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    video_id TEXT,
+    youtube_id TEXT,
+    era TEXT,
+    params JSONB,
+    render_verification JSONB,
+    render_compliance TEXT,
+    metrics JSONB,
+    metrics_attached_at TIMESTAMPTZ,
+    loss_value FLOAT,
+    published_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS optimizer_cycles (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    epoch INT DEFAULT 0,
+    observations_used INT DEFAULT 0,
+    confidence_level TEXT DEFAULT 'none',
+    proposals JSONB,
+    auto_applied JSONB,
+    pending_approval JSONB,
+    rollback_triggered BOOLEAN DEFAULT FALSE,
+    rollback_params JSONB,
+    diagnostics JSONB,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_topics_status ON topics(status);
 CREATE INDEX IF NOT EXISTS idx_videos_created ON videos(created_at DESC);
 """)

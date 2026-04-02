@@ -15,8 +15,12 @@ export const KeyText: React.FC<Props> = ({text, emphasis = 'claim', duration}) =
     config: {damping: 14, stiffness: 90, mass: 1}});
   const entranceScale = interpolate(entranceSpring, [0, 1], [0.92, 1]);
 
-  // Typewriter reveal: characters appear over ~1.2s
-  const revealDuration = fps * 1.2;
+  // Blur-to-sharp entrance: blur(4px) → blur(0px) over first ~0.3s
+  const blurAmount = interpolate(frame, [0, Math.round(fps * 0.3)], [4, 0],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+
+  // Typewriter reveal: characters appear over ~0.8s
+  const revealDuration = fps * 0.8;
   const charsVisible = Math.floor(interpolate(frame, [fps * 0.2, fps * 0.2 + revealDuration], [0, text.length],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
 
@@ -82,6 +86,7 @@ export const KeyText: React.FC<Props> = ({text, emphasis = 'claim', duration}) =
     }}>
       <div style={{
         transform: `scale(${entranceScale})`,
+        filter: blurAmount > 0.01 ? `blur(${blurAmount}px)` : 'none',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
         {/* Backdrop blur */}

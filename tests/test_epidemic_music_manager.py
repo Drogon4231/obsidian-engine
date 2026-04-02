@@ -124,7 +124,9 @@ class TestSearchForVideo:
         assert result is not None
         assert result["music_file"] == "music/test.mp3"
         assert result["music_start_offset"] == 0
-        mock_search.assert_called_once_with("dramatic", target_duration=200)
+        mock_search.assert_called_once_with(
+            "dramatic", target_duration=200, scenes=scenes, topic='',
+        )
 
     def test_returns_none_for_empty_scenes(self):
         from media.epidemic_music_manager import search_for_video

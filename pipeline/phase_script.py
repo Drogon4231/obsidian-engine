@@ -230,6 +230,21 @@ def _post_process_script(ctx: PipelineContext, runner: StageRunner, a04) -> None
                 "even after expansion attempt."
             )
 
+    # ── Script duration target check (1400-word minimum for 8-11 min video) ──
+    if word_count < 1200:
+        logger.error(f"[Script] Word count {word_count} is below 1200-word floor for 8-11 min target")
+        try:
+            from server.notify import _tg
+            _tg(
+                f"[Script] Word count critically low: {word_count} words\n"
+                f"Topic: {ctx.topic}\n"
+                f"Target: 1400+ words for 8-11 min video"
+            )
+        except Exception:
+            pass
+    elif word_count < 1400:
+        logger.warning(f"[Script] Script below 1400-word target for 8-11 min video ({word_count} words)")
+
     issues = check_script(script)
     _check_and_warn(issues, "Script")
     _check_and_warn(check_pacing(script), "Pacing")

@@ -127,6 +127,8 @@ def should_play_sfx(scene: dict) -> bool:
     - Scenes tagged as dramatic/tense mood
     - Scenes with is_breathing_room (subtle SFX to fill silence)
     """
+    if scene.get("intent_silence_beat"):
+        return False
     if scene.get("is_reveal_moment"):
         return True
     narrative_fn = scene.get("narrative_function", "")

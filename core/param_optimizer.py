@@ -542,6 +542,27 @@ class ParamOptimizer:
         if confidence_level not in CONFIDENCE_MULTIPLIERS:
             raise ValueError(f"Invalid confidence_level: {confidence_level}")
 
+        # ── Circuit breaker: insufficient data guard ─────────────────────────
+        _CB_MIN = 10       # minimum observations before optimizer may act
+        n_obs = len(observations)
+        if n_obs < _CB_MIN and confidence_level == "none":
+            print(
+                f"[Optimizer] Circuit breaker: insufficient data "
+                f"({n_obs}/{_CB_MIN} observations). Skipping optimization cycle."
+            )
+            return OptimizationResult(
+                proposals=[],
+                rollback_triggered=False,
+                rollback_params=None,
+                next_exploration=None,
+                updated_state=state,
+                diagnostics={
+                    "circuit_breaker": True,
+                    "observations_total": n_obs,
+                    "observations_needed": _CB_MIN,
+                },
+            )
+
         # Filter observations: only those with render_compliance >= 0.5
         # (low compliance = params weren't honored, unreliable for gradient)
         reliable_obs = [

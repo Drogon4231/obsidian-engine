@@ -48,10 +48,22 @@ ERA_CONSTRAINTS = {
         "negative": "no Greek columns, no Roman architecture, no medieval elements, no Islamic arches",
     },
     "mughal": {
-        "keywords": ["mughal", "akbar", "shah jahan", "taj mahal", "delhi sultanate"],
+        "keywords": ["mughal", "akbar", "shah jahan", "taj mahal", "delhi sultanate", "jahanara", "aurangzeb", "dara shikoh", "mughal india"],
         "years": (1526, 1857),
-        "positive": "Mughal miniature painting style, ornate domes, jali screens, marble inlay, jeweled turbans, Indo-Islamic architecture",
-        "negative": "no ancient ruins, no bare stone pillars, no Brahmanic dress, no Roman elements",
+        "positive": "Mughal miniature painting, Indo-Persian art style, Mughal court architecture, jali screens, marble inlay, jeweled turbans, ornate domes",
+        "negative": "no ancient ruins, no bare stone pillars, no Brahmanic dress, no Roman elements, no European landscape, no American portrait, no Western oil painting, no Thomas Cole",
+    },
+    "ottoman": {
+        "keywords": ["ottoman", "sultan", "constantinople", "topkapi", "suleiman", "byzantine", "istanbul"],
+        "years": (1299, 1922),
+        "positive": "Ottoman court dress, Iznik tile patterns, Byzantine-influenced domes, calligraphy, horseshoe arches, minarets, hammam interiors",
+        "negative": "no European court dress, no Renaissance architecture, no Western armor, no modern buildings",
+    },
+    "vijayanagara": {
+        "keywords": ["vijayanagara", "hampi", "krishnadevaraya", "tungabhadra", "deccan", "nayaka"],
+        "years": (1336, 1646),
+        "positive": "Dravidian temple architecture, gopuram towers, stone chariot, carved basalt columns, royal elephant processions, South Indian silk garments",
+        "negative": "no Mughal domes, no Islamic arches, no North Indian court dress, no European elements",
     },
     "ancient_greek": {
         "keywords": ["greek", "athens", "sparta", "alexander", "philosopher", "olympics", "pericles", "socrates", "plato"],
@@ -367,7 +379,7 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                 else:
                     result = _fal_subscribe_with_retry("fal-ai/flux-pro/v1.1-ultra", {
                         "prompt": prompt,
-                        "image_size": {"width": 2560, "height": 1440},
+                        "aspect_ratio": "16:9",
                         "num_images": 1,
                         "safety_tolerance": "2",
                     }, label=f"{_thread} scene {idx+1}")
@@ -427,11 +439,17 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                 from pipeline.helpers import download_file as _dl
                 _dl(wiki_url, fallback_path)
                 # Validate downloaded file is actually an image (not a video or HTML page)
-                import imghdr
-                img_type = imghdr.what(str(fallback_path))
-                if img_type not in ("jpeg", "png", "gif", "webp", "bmp"):
+                _is_valid_image = False
+                try:
+                    from PIL import Image as _PILCheck
+                    _check_img = _PILCheck.open(str(fallback_path))
+                    _check_img.verify()
+                    _is_valid_image = True
+                except Exception:
+                    pass
+                if not _is_valid_image:
                     fallback_path.unlink(missing_ok=True)
-                    logger.warning(f"  [{_thread}] Wikimedia fallback is not an image (type={img_type}) — skipping")
+                    logger.warning(f"  [{_thread}] Wikimedia fallback is not a valid image — skipping")
                 else:
                     scene["ai_image"] = str(fallback_path)
                     logger.info(f"  [{_thread}] Using Wikimedia fallback: {fallback_path.name}")
@@ -471,7 +489,7 @@ def _generate_character_portraits(visual_bible, scenes, assets_dir):
             )
             result = _fal_subscribe_with_retry("fal-ai/flux-pro/v1.1-ultra", {
                 "prompt": portrait_prompt,
-                "image_size": {"width": 1024, "height": 1024},
+                "aspect_ratio": "1:1",
                 "num_images": 1,
             }, label=f"portrait_{slug}")
 

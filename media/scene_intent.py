@@ -150,7 +150,7 @@ _FUNCTION_MODIFIERS = {
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
         "speech_intensity":  0.95,    # maximum intensity
-        "silence_eligible":  True,    # silence before climax is powerful
+        "silence_eligible":  False,   # climax must never be silent
     },
     "twist": {
         "energy_offset":    +0.20,
@@ -159,7 +159,7 @@ _FUNCTION_MODIFIERS = {
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
         "speech_intensity":  0.85,
-        "silence_eligible":  True,
+        "silence_eligible":  False,   # twist must never be silent
     },
     "reveal": {
         "energy_offset":    +0.20,
@@ -168,7 +168,7 @@ _FUNCTION_MODIFIERS = {
         "caption_style":    "emphasis",
         "motion_hint":      "zoom_in",
         "speech_intensity":  0.9,
-        "silence_eligible":  True,
+        "silence_eligible":  False,   # reveal must never be silent
     },
     "falling_action": {
         "energy_offset":    -0.10,

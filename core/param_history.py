@@ -20,7 +20,7 @@ from pathlib import Path
 # ── Thread-safe JSONL writer ───────────────────────────────────────────────
 
 _optimizer_log_lock = threading.Lock()
-_OPTIMIZER_LOG_PATH = Path("outputs/optimizer_log.jsonl")
+_OPTIMIZER_LOG_PATH = Path(__file__).resolve().parent.parent / "outputs" / "optimizer_log.jsonl"
 _OPTIMIZER_LOG_MAX_BYTES = 5 * 1024 * 1024  # 5MB rotation
 
 
@@ -32,6 +32,8 @@ def _append_optimizer_log(entry: dict) -> None:
             # Rotate if over 5MB
             if _OPTIMIZER_LOG_PATH.exists() and _OPTIMIZER_LOG_PATH.stat().st_size > _OPTIMIZER_LOG_MAX_BYTES:
                 rotated = _OPTIMIZER_LOG_PATH.with_suffix(".jsonl.1")
+                if rotated.exists():
+                    rotated.unlink()
                 _OPTIMIZER_LOG_PATH.rename(rotated)
 
             with open(_OPTIMIZER_LOG_PATH, "a") as f:
@@ -63,6 +65,7 @@ def store_observation(
             "youtube_id": youtube_id,
             "era": era,
             "params": params,
+            "published_at": datetime.now(timezone.utc).isoformat(),
         }
 
         # Serialize render verification if provided
@@ -83,7 +86,7 @@ def store_observation(
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(10, "param_history.store_observation", e, "warning")
+            log_error("10", "param_history.store_observation", e, "warning")
         except Exception:
             pass
         return None
@@ -130,7 +133,7 @@ def attach_metrics(youtube_id: str, metrics_dict: dict) -> bool:
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.attach_metrics", e, "warning")
+            log_error("12", "param_history.attach_metrics", e, "warning")
         except Exception:
             pass
         return False
@@ -161,7 +164,7 @@ def load_observations(min_age_hours: int = 48, limit: int = 50) -> list[dict] | 
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.load_observations", e, "warning")
+            log_error("12", "param_history.load_observations", e, "warning")
         except Exception:
             pass
         return None
@@ -191,7 +194,7 @@ def load_optimizer_state() -> dict | None:
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.load_optimizer_state", e, "warning")
+            log_error("12", "param_history.load_optimizer_state", e, "warning")
         except Exception:
             pass
         return None
@@ -226,7 +229,7 @@ def save_optimizer_state(state) -> bool:
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.save_optimizer_state", e, "warning")
+            log_error("12", "param_history.save_optimizer_state", e, "warning")
         except Exception:
             pass
         return False
@@ -276,7 +279,7 @@ def log_optimizer_cycle(result_dict: dict) -> bool:
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.log_optimizer_cycle", e, "warning")
+            log_error("12", "param_history.log_optimizer_cycle", e, "warning")
         except Exception:
             pass
 
@@ -372,7 +375,7 @@ def save_override_batch(updates: dict[str, float], approved_by: str = "optimizer
     except Exception as e:
         try:
             from core.observability import log_error
-            log_error(12, "param_history.save_override_batch", e, "warning")
+            log_error("12", "param_history.save_override_batch", e, "warning")
         except Exception:
             pass
         return False

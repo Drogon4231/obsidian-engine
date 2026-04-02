@@ -189,9 +189,10 @@ export function applyDucking(
   const dist = distanceToSpeech(time, mask);
   if (dist === 0) return speechVol; // Inside speech — fully ducked
 
-  // Determine if we're approaching speech (pre-speech) or leaving it (post-speech)
-  // by checking if the nearest speech interval is ahead or behind
-  const isPreSpeech = mask.length > 0 && mask.some(iv => iv.start > time && iv.start - time <= dist + 0.01);
+  // Determine if we're approaching speech (pre-speech) or leaving it (post-speech).
+  // Use distanceToSpeech at time+ε: if distance decreases, we're moving toward speech.
+  // Both calls use binary search — O(log n) — replacing the O(n) mask.some() scan.
+  const isPreSpeech = mask.length > 0 && distanceToSpeech(time + 0.001, mask) < dist;
   const ramp = isPreSpeech ? attack : release;
   const t = Math.min(dist / ramp, 1);
   return speechVol + t * (silenceVol - speechVol);
@@ -213,15 +214,37 @@ export function crossfadeMultiplier(
   role: 'primary' | 'secondary',
   crossfadeStart = 0.60,
   crossfadeEnd = 0.70,
+  style: 'blend' | 'dip' = 'blend',
 ): number {
   if (progress < crossfadeStart) {
     return role === 'primary' ? 1.0 : 0.0;
   }
   if (progress >= crossfadeEnd) {
-    return role === 'primary' ? 0.5 : 1.0;
+    return role === 'primary' ? (style === 'dip' ? 0.0 : 0.5) : 1.0;
   }
-  // Linear interpolation during crossfade window
+
   const t = (progress - crossfadeStart) / (crossfadeEnd - crossfadeStart);
+
+  if (style === 'dip') {
+    // Dip crossfade: primary cosine-fades to 0, silence gap, secondary cosine-fades in
+    // Eliminates key/tempo collision between tracks
+    const dipMid = 0.5;
+    const silenceGap = 0.08; // ~8% of crossfade window is silence
+    if (t < dipMid - silenceGap) {
+      // Primary fading out
+      const fadeT = t / (dipMid - silenceGap);
+      return role === 'primary' ? Math.cos(fadeT * Math.PI / 2) : 0;
+    } else if (t < dipMid + silenceGap) {
+      // Silence gap — both tracks at 0
+      return 0;
+    } else {
+      // Secondary fading in
+      const fadeT = (t - dipMid - silenceGap) / (1 - dipMid - silenceGap);
+      return role === 'primary' ? 0 : Math.sin(fadeT * Math.PI / 2);
+    }
+  }
+
+  // Blend crossfade (original behavior)
   return role === 'primary' ? 1.0 - t * 0.5 : t;
 }
 
@@ -289,6 +312,49 @@ function getSceneAtFrame(
   return null;
 }
 
+// ── Silence Beat Ramp ─────────────────────────────────────────────────────
+
+/**
+ * Cosine (equal-power) volume ramp for silence beat scenes.
+ * Replaces the hard `return 0.02` with a perceptually smooth transition.
+ * Asymmetric: entry ramp is faster (1.5s) than exit (3.0s minimum) because ears
+ * notice sounds appearing more than disappearing.
+ * Guarantees at least 2s of actual silence in the middle of the beat.
+ *
+ * exitTarget: volume to ramp toward on exit (should be speechVol / ducked volume,
+ * not normalVol — avoids jarring full-volume jump after silence).
+ */
+export function silenceBeatVolume(
+  time: number,
+  scene: AudioScene,
+  normalVol: number,
+  silenceFloor: number,
+  entryRamp = 1.5,
+  exitRamp = 3.0,
+  exitTarget?: number,
+): number {
+  const sceneDur = scene.end_time - scene.start_time;
+  const effectiveEntry = Math.min(entryRamp, Math.max(0.3, (sceneDur - 2.0) / 2));
+  // Exit ramp minimum is 3.0s for a gentle rise back to speech-ducked volume
+  const effectiveExit = Math.max(3.0, Math.min(exitRamp, Math.max(0.3, (sceneDur - 2.0) / 2)));
+  const timeSinceStart = time - scene.start_time;
+  const timeUntilEnd = scene.end_time - time;
+  // On exit, ramp to exitTarget (speechVol / ducked) rather than full normalVol
+  const rampTarget = exitTarget !== undefined ? exitTarget : normalVol;
+
+  if (timeSinceStart < effectiveEntry) {
+    const t = timeSinceStart / effectiveEntry;
+    const curve = Math.cos(t * Math.PI / 2);
+    return silenceFloor + (normalVol - silenceFloor) * curve;
+  }
+  if (timeUntilEnd < effectiveExit) {
+    const t = timeUntilEnd / effectiveExit;
+    const curve = Math.cos(t * Math.PI / 2);
+    return silenceFloor + (rampTarget - silenceFloor) * curve;
+  }
+  return silenceFloor;
+}
+
 // ── Composite Helpers ──────────────────────────────────────────────────────
 
 /**
@@ -312,15 +378,23 @@ export function primaryMusicVolume(
   const scene = scenes.length > 0 ? getSceneAtFrame(scenes, frame, fps) : null;
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
-  // Silence beat override: use intent_silence_beat flag (not energy threshold)
-  if (scene?.intent_silence_beat) {
-    return 0.02; // Near-silence for devastating moments
-  }
-
+  // Compute normal volume first (needed for silence beat ramp)
   const actMul = buildVolumeEnvelope(progress, {}, actMultipliersConfig);
   const crossMul = hasSecondary ? crossfadeMultiplier(progress, 'primary') : 1.0;
   const ducked = applyDucking(time, mask, duckingConfig);
-  return Math.min(1.0, intentBase * actMul * ducked * crossMul);
+  const normalVol = Math.min(1.0, intentBase * actMul * ducked * crossMul);
+
+  // Silence beat: cosine ramp to near-silence (replaces hard cut).
+  // Exit ramp targets ducked (speechVol) not normalVol — avoids jarring volume jump.
+  // silenceFloor is relative to the UN-DUCKED volume (intentBase) so the drop is
+  // perceptible even when music is already ducked during speech.
+  if (scene?.intent_silence_beat) {
+    const undduckedBase = intentBase;
+    const silenceFloor = Math.max(0.01, undduckedBase * 0.03);
+    return silenceBeatVolume(time, scene, normalVol, silenceFloor, 1.5, 3.0, ducked);
+  }
+
+  return normalVol;
 }
 
 /**
@@ -341,12 +415,7 @@ export function secondaryMusicVolume(
   const scene = scenes.length > 0 ? getSceneAtFrame(scenes, frame, fps) : null;
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
-  // Silence beat override
-  if (scene?.intent_silence_beat) {
-    return 0.01;
-  }
-
-  // Secondary track uses softer ducking defaults, overridden by config
+  // Compute normal volume first (needed for silence beat ramp)
   const secondaryDucking = {
     speechVolume: 0.06,
     silenceVolume: 0.30,
@@ -354,7 +423,18 @@ export function secondaryMusicVolume(
   };
   const crossMul = crossfadeMultiplier(progress, 'secondary');
   const ducked = applyDucking(time, mask, secondaryDucking);
-  return Math.min(1.0, intentBase * ducked * crossMul);
+  const normalVol = Math.min(1.0, intentBase * ducked * crossMul);
+
+  // Silence beat: cosine ramp to near-silence (replaces hard cut).
+  // Exit ramp targets ducked volume not normalVol — avoids jarring volume jump.
+  // silenceFloor is relative to the UN-DUCKED volume (intentBase).
+  if (scene?.intent_silence_beat) {
+    const undduckedBase = intentBase;
+    const silenceFloor = Math.max(0.01, undduckedBase * 0.03);
+    return silenceBeatVolume(time, scene, normalVol, silenceFloor, 1.5, 3.0, ducked);
+  }
+
+  return normalVol;
 }
 
 
@@ -392,11 +472,7 @@ export function stemVolume(
   const scene = scenes.length > 0 ? getSceneAtFrame(scenes, frame, fps) : null;
   const intentBase = scene?.intent_music_volume_base ?? 0.5;
 
-  // Silence beat override
-  if (scene?.intent_silence_beat) {
-    return stem === 'drums' ? 0.03 : 0.01;
-  }
-
+  // Compute normal volume first (needed for silence beat ramp)
   const actMul = buildVolumeEnvelope(progress, undefined, actMultipliersConfig);
   const crossMul = hasSecondary ? crossfadeMultiplier(progress, 'primary') : 1.0;
 
@@ -407,5 +483,18 @@ export function stemVolume(
     silenceVolume: stemConfig.silenceVolume,
   });
 
-  return Math.min(1.0, intentBase * actMul * ducked * crossMul);
+  const normalVol = Math.min(1.0, intentBase * actMul * ducked * crossMul);
+
+  // Silence beat: cosine ramp (drums keep faint pulse, others near-silent).
+  // Exit ramp targets ducked volume not normalVol — avoids jarring volume jump.
+  // silenceFloor is relative to the UN-DUCKED volume (intentBase).
+  if (scene?.intent_silence_beat) {
+    const undduckedBase = intentBase;
+    const floor = stem === 'drums'
+      ? Math.max(0.02, undduckedBase * 0.05)
+      : Math.max(0.01, undduckedBase * 0.03);
+    return silenceBeatVolume(time, scene, normalVol, floor, 1.5, 3.0, ducked);
+  }
+
+  return normalVol;
 }
