@@ -235,6 +235,7 @@ def pipeline_env(tmp_path):
     _p("pipeline.phase_post._log_api_costs", MagicMock())
     _p("pipeline.phase_post._run_community_engagement", MagicMock())
     _p("pipeline.phase_post._run_quality_report", MagicMock())
+    _p("pipeline.phase_post._run_optimizer_analysis", MagicMock())
     _p("pipeline.phase_post._cleanup_after_upload", MagicMock())
     _p("pipeline.phase_post.load_agent", MagicMock(return_value=MagicMock()))
 
@@ -427,6 +428,7 @@ class TestPipelineResume:
         _p("pipeline.phase_post._log_api_costs", MagicMock())
         _p("pipeline.phase_post._run_community_engagement", MagicMock())
         _p("pipeline.phase_post._run_quality_report", MagicMock())
+        _p("pipeline.phase_post._run_optimizer_analysis", MagicMock())
         _p("pipeline.phase_post._cleanup_after_upload", MagicMock())
         _p("pipeline.phase_post.load_agent", MagicMock(return_value=MagicMock()))
 
@@ -522,6 +524,7 @@ class TestPipelineFromStage:
         _p("pipeline.phase_post._log_api_costs", MagicMock())
         _p("pipeline.phase_post._run_community_engagement", MagicMock())
         _p("pipeline.phase_post._run_quality_report", MagicMock())
+        _p("pipeline.phase_post._run_optimizer_analysis", MagicMock())
         _p("pipeline.phase_post._cleanup_after_upload", MagicMock())
         _p("pipeline.phase_post.load_agent", MagicMock(return_value=MagicMock()))
 

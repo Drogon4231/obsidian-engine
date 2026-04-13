@@ -382,8 +382,8 @@ def _deep_analysis_with_claude(state: dict, timings: dict,
         result = call_claude(
             system_prompt=(
                 "You are a senior content strategy and engineering consultant for "
-                "The Obsidian Archive — a dark history YouTube channel with an automated "
-                "AI video pipeline. Your job is to analyze a completed pipeline run and "
+                "a YouTube channel with an automated AI video pipeline. "
+                "Your job is to analyze a completed pipeline run and "
                 "produce actionable, prioritized recommendations across four dimensions:\n\n"
                 "1. PROMPT QUALITY — Are agent system prompts clear, specific, well-constrained?\n"
                 "2. OUTPUT QUALITY — Are the stage outputs good? What patterns suggest improvement?\n"

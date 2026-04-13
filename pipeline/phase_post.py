@@ -134,6 +134,9 @@ def run_post_phase(
     # ── Quality checks ────────────────────────────────────────────────────────
     _run_quality_report(ctx)
 
+    # ── Pipeline optimizer analysis ──────────────────────────────────────────
+    _run_optimizer_analysis(ctx)
+
     # ── Post-upload cleanup ───────────────────────────────────────────────────
     try:
         from core.pipeline_config import CLEANUP_AFTER_UPLOAD
@@ -223,6 +226,30 @@ def _run_render_verification(ctx: PipelineContext) -> None:
                 logger.info(f"[Render Verify] Compliance: {verification_result.overall_compliance:.0%}")
                 for dev in verification_result.deviations:
                     logger.warning(f"  \u26a0 {dev}")
+
+            # ── Rendered audit (extract frames + silence beat audio for review) ──
+            try:
+                from core.rendered_audit import run_rendered_audit
+                _audit_dir = str(Path(ctx.state_path).parent / "rendered_audit")
+                _pqa_scenes = ctx.state.get("scenes", [])
+                if not _pqa_scenes:
+                    _s11 = ctx.state.get("stage_11", {})
+                    if isinstance(_s11, dict):
+                        _pqa_scenes = _s11.get("scenes", [])
+                audit_result = run_rendered_audit(
+                    _video_path, _pqa_scenes, _audit_dir
+                )
+                ctx.state["rendered_audit"] = audit_result
+                _n_frames = len(audit_result.get("frames", []))
+                _n_audio = len(audit_result.get("silence_beat_audio", []))
+                if _n_frames or _n_audio:
+                    logger.info(
+                        f"[Rendered Audit] Extracted {_n_frames} frame(s)"
+                        f" + {_n_audio} audio segment(s)"
+                    )
+            except Exception as audit_err:
+                logger.warning(f"[Rendered Audit] Skipped: {audit_err}")
+
             save_state(ctx.state, ctx.state_path)
     except Exception as rv_err:
         logger.warning(f"[Pipeline] Render verification warning: {rv_err}")
@@ -416,8 +443,22 @@ def _run_quality_report(ctx: PipelineContext) -> None:
             logger.warning(f"\n[Quality Report] {qc['total_warnings']} warning(s):")
             for w in qc["warnings"]:
                 logger.warning(f"  \u26a0 {w}")
+            try:
+                from server.notify import notify_quality_warn
+                notify_quality_warn("Pipeline Quality Check", qc["warnings"])
+            except Exception:
+                pass
         else:
             logger.info("\n[Quality Report] All checks passed \u2014 no warnings.")
         logger.info(f"[Quality Metrics] {json.dumps(qc['metrics'], indent=2)}")
     except Exception as qe:
         logger.warning(f"[Quality Report] Could not run checks: {qe}")
+
+
+def _run_optimizer_analysis(ctx: PipelineContext) -> None:
+    """Run post-pipeline quality analysis and save to lessons_learned.json."""
+    try:
+        from core.pipeline_optimizer import analyze
+        analyze(ctx.state, ctx.state_path)
+    except Exception as opt_err:
+        logger.warning(f"[Pipeline] Optimizer analysis skipped: {opt_err}")

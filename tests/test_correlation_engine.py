@@ -2,13 +2,11 @@
 
 from intel.correlation_engine import (
     _safe_float,
-    _coefficient_of_variation,
     _pearson,
     _pearson_with_p,
     _spearman,
     _correlate,
     _rank_transform,
-    _benjamini_hochberg,
     _compute_topic_health,
     JoinRegistry,
     CorrelationEngine,
@@ -38,24 +36,6 @@ class TestSafeFloat:
 
     def test_integer(self):
         assert _safe_float(7) == 7.0
-
-
-class TestCoefficientOfVariation:
-    def test_uniform_values(self):
-        assert _coefficient_of_variation([5.0, 5.0, 5.0]) == 0.0
-
-    def test_varied_values(self):
-        cv = _coefficient_of_variation([1.0, 2.0, 3.0])
-        assert 0.3 < cv < 0.5  # stdev ~0.816, mean 2, CV ~0.408
-
-    def test_single_value(self):
-        assert _coefficient_of_variation([5.0]) == 0.0
-
-    def test_empty_list(self):
-        assert _coefficient_of_variation([]) == 0.0
-
-    def test_near_zero_mean(self):
-        assert _coefficient_of_variation([0.0, 0.0, 0.0]) == 0.0
 
 
 class TestPearson:
@@ -151,27 +131,6 @@ class TestCorrelate:
         r, p = _correlate(xs, ys)
         assert r is not None
         assert abs(r - 1.0) < 0.01
-
-
-class TestBenjaminiHochberg:
-    def test_all_significant(self):
-        pvals = [("a", 0.001), ("b", 0.002), ("c", 0.003)]
-        result = _benjamini_hochberg(pvals, q=0.10)
-        assert set(result) == {"a", "b", "c"}
-
-    def test_none_significant(self):
-        pvals = [("a", 0.5), ("b", 0.6), ("c", 0.9)]
-        result = _benjamini_hochberg(pvals, q=0.10)
-        assert result == []
-
-    def test_partial_significant(self):
-        pvals = [("a", 0.001), ("b", 0.5), ("c", 0.9)]
-        result = _benjamini_hochberg(pvals, q=0.10)
-        assert "a" in result
-        assert "c" not in result
-
-    def test_empty_input(self):
-        assert _benjamini_hochberg([]) == []
 
 
 # ── Join Registry ────────────────────────────────────────────────────────────

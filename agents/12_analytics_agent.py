@@ -2083,10 +2083,24 @@ def run() -> dict:
         vid_views = max(views, 1)
         avg_view_dur_s = round((watch_min * 60) / vid_views, 2) if watch_min else 0.0
 
-        # Content classification (title-only at analytics time)
+        # Content classification — pass all available data from row
         try:
             from intel.content_classifier import classify_video_content
-            classification = classify_video_content({"title": title})
+            _ps = row.get("pipeline_state") or {}
+            if isinstance(_ps, str):
+                try:
+                    _ps = json.loads(_ps)
+                except Exception:
+                    _ps = {}
+            _script = (_ps.get("stage_4") or {}).get("full_script", "")
+            classification = classify_video_content(
+                manifest={
+                    "title": title,
+                    "topic": row.get("topic", ""),
+                    "script": _script,
+                },
+                total_duration=row.get("duration_seconds", 0),
+            )
         except Exception:
             classification = {}
 

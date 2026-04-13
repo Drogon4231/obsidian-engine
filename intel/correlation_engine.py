@@ -43,18 +43,6 @@ def _safe_float(val) -> float | None:
         return None
 
 
-def _coefficient_of_variation(values: list[float]) -> float:
-    """CV = stdev / |mean|. Returns 0 if mean near zero or < 2 values."""
-    n = len(values)
-    if n < 2:
-        return 0.0
-    mean = sum(values) / n
-    if abs(mean) < 1e-9:
-        return 0.0
-    stdev = (sum((v - mean) ** 2 for v in values) / n) ** 0.5
-    return stdev / abs(mean)
-
-
 def _pearson(xs: list, ys: list) -> float | None:
     """Pearson correlation. Returns None if < 3 data points or NaN present."""
     n = len(xs)
@@ -131,23 +119,6 @@ def _correlate(xs: list, ys: list) -> tuple[float | None, float | None]:
     if len(xs) < 8:
         return _spearman(xs, ys)
     return _pearson_with_p(xs, ys)
-
-
-def _benjamini_hochberg(p_values: list[tuple[str, float]], q: float = 0.10) -> list[str]:
-    """Benjamini-Hochberg FDR correction.
-    Input: list of (test_name, p_value). Returns test_names significant after correction."""
-    if not p_values:
-        return []
-    sorted_pv = sorted(p_values, key=lambda x: x[1])
-    m = len(sorted_pv)
-    last_significant_k = -1
-    for k, (name, p) in enumerate(sorted_pv, 1):
-        threshold = (k / m) * q
-        if p <= threshold:
-            last_significant_k = k
-    if last_significant_k > 0:
-        return [name for name, p in sorted_pv[:last_significant_k]]
-    return []
 
 
 # ── Join Registry ────────────────────────────────────────────────────────────

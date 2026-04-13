@@ -113,6 +113,8 @@ def notify_quality_warn(stage: str, warnings: list) -> None:
     _send({"embeds": [{"title": f"⚠️ Quality Warnings — {stage}",
         "description": bullet, "color": 0xF59E0B,
         "footer": {"text": "The Obsidian Archive"}}]})
+    _tg(f"⚠️ *Quality Warnings — {stage}*\n{len(warnings)} warning(s):\n" +
+        "\n".join(f"• {w}" for w in warnings[:10]))
 
 def notify_error_spike(agent: str, error_type: str, count: int, sample_trace: str):
     """Telegram + Discord alert when errors spike."""
