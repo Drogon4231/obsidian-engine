@@ -707,3 +707,56 @@ class TestCharacterSlug:
     def test_special_chars(self):
         slug = re.sub(r'[^a-z0-9]+', '_', "St. Peter's".lower()).strip('_')
         assert slug == "st_peter_s"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# _ensure_min_resolution
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestEnsureMinResolution:
+    """Test the resolution safety net."""
+
+    def test_undersized_image_gets_upscaled(self, tmp_path):
+        from PIL import Image
+        small = tmp_path / "small.jpg"
+        Image.new("RGB", (1024, 576)).save(small)
+        from pipeline.images import _ensure_min_resolution
+        was_upscaled = _ensure_min_resolution(small, 1920, 1080)
+        assert was_upscaled is True
+        img = Image.open(small)
+        assert img.size[0] >= 1920
+        assert img.size[1] >= 1080
+
+    def test_large_image_unchanged(self, tmp_path):
+        from PIL import Image
+        big = tmp_path / "big.jpg"
+        Image.new("RGB", (2560, 1440)).save(big)
+        from pipeline.images import _ensure_min_resolution
+        was_upscaled = _ensure_min_resolution(big, 1920, 1080)
+        assert was_upscaled is False
+        img = Image.open(big)
+        assert img.size == (2560, 1440)
+
+    def test_preserves_aspect_ratio(self, tmp_path):
+        from PIL import Image
+        small = tmp_path / "wide.jpg"
+        Image.new("RGB", (1344, 756)).save(small)
+        from pipeline.images import _ensure_min_resolution
+        _ensure_min_resolution(small, 1920, 1080)
+        img = Image.open(small)
+        w, h = img.size
+        assert w >= 1920
+        assert h >= 1080
+        assert abs(w / h - 1344 / 756) < 0.02
+
+    def test_nonexistent_file_returns_false(self, tmp_path):
+        from pipeline.images import _ensure_min_resolution
+        result = _ensure_min_resolution(tmp_path / "nope.jpg", 1920, 1080)
+        assert result is False
+
+    def test_corrupt_file_returns_false(self, tmp_path):
+        bad = tmp_path / "corrupt.jpg"
+        bad.write_text("not an image")
+        from pipeline.images import _ensure_min_resolution
+        result = _ensure_min_resolution(bad, 1920, 1080)
+        assert result is False

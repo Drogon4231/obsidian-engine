@@ -220,6 +220,26 @@ def _score_image(image_path) -> int:
         return 0
 
 
+def _ensure_min_resolution(image_path, min_width: int = 1920, min_height: int = 1080) -> bool:
+    """Upscale image to min dimensions using Lanczos if undersized. Returns True if upscaled."""
+    try:
+        from PIL import Image as _PILImage
+        img = _PILImage.open(image_path)
+        w, h = img.size
+        if w >= min_width and h >= min_height:
+            img.close()
+            return False
+        scale = max(min_width / w, min_height / h)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+        img = img.resize((new_w, new_h), _PILImage.LANCZOS)
+        img.save(image_path, quality=95)
+        img.close()
+        return True
+    except Exception:
+        return False
+
+
 def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                            mood_light, style_recraft, style_flux,
                            character_portraits=None, visual_bible=None,
@@ -405,6 +425,18 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
 
             logger.info(f"  [{_thread}] Quality: {_score}/10 {'OK' if _score >= IMAGE_QUALITY_THRESHOLD else 'below threshold'}")
 
+            # Resolution check — undersized images penalize quality score to trigger retry
+            try:
+                from PIL import Image as _PILImage
+                _img = _PILImage.open(attempt_path)
+                _w, _h = _img.size
+                _img.close()
+                if _w < 1920 or _h < 1080:
+                    logger.warning(f"  [{_thread}] Undersized: {_w}x{_h} — treating as quality failure")
+                    _score = min(_score, IMAGE_QUALITY_THRESHOLD - 1)
+            except Exception:
+                pass
+
             if _score > best_score:
                 best_score = _score
                 best_path = attempt_path
@@ -425,6 +457,11 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
 
         if best_score < IMAGE_QUALITY_THRESHOLD:
             logger.warning(f"  [{_thread}] Best quality {best_score}/10 — below {IMAGE_QUALITY_THRESHOLD} threshold but using anyway")
+
+        # Safety net: upscale final image if still undersized after all retries
+        if _ensure_min_resolution(img_path):
+            logger.info(f"  [{_thread}] Upscaled to minimum resolution (Lanczos)")
+
         scene["ai_image"] = str(img_path)
         return (idx, scene, True)
 
@@ -451,6 +488,8 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                     fallback_path.unlink(missing_ok=True)
                     logger.warning(f"  [{_thread}] Wikimedia fallback is not a valid image — skipping")
                 else:
+                    if _ensure_min_resolution(fallback_path):
+                        logger.info(f"  [{_thread}] Upscaled Wikimedia fallback to minimum resolution")
                     scene["ai_image"] = str(fallback_path)
                     logger.info(f"  [{_thread}] Using Wikimedia fallback: {fallback_path.name}")
                     return (idx, scene, True)
