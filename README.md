@@ -1,179 +1,215 @@
+<div align="center">
+
 # Obsidian Engine
 
-**Open-source AI video pipeline.** Generate full YouTube videos from a single topic — documentary, essay, explainer, true crime, or any style you define.
+### One topic in. Finished YouTube video out.
 
-```
-Topic → Research → Script → Narration → Visuals → Video → Upload
+**The open-source AI pipeline that researches, writes, narrates, illustrates, and uploads complete YouTube videos — autonomously.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-1%2C400%2B_passing-brightgreen.svg)](#running-tests)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+<!-- TODO: Replace with actual demo GIF — record: run_pipeline.py "topic" → rendered video → YouTube upload -->
+<!-- ![Demo](docs/demo.gif) -->
+
+```bash
+python run_pipeline.py "The Secret History of the Internet"
+# ☕ Come back in 15 minutes. Your video is on YouTube.
 ```
 
-One command in, finished video out.
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Content Profiles](#content-profiles) · [Configuration](#configuration) · [Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
-## What It Does
+## Why This Exists
 
-Obsidian Engine is a 13-stage automated pipeline that turns a topic into a complete, narrated, visually-rich YouTube video:
+Creating a single YouTube video takes **20-40 hours** of research, writing, recording, editing, and optimization. Obsidian Engine does all of it in **~15 minutes for ~$2**.
 
-| Stage | What Happens |
-|-------|-------------|
-| 1. Research | Deep-dives into the topic using AI |
-| 2. Originality | Finds a unique angle nobody has covered |
-| 3. Narrative | Architects a story structure with hooks and pacing |
-| 4. Script | Writes a broadcast-quality narration script |
-| 4b. Script Doctor | Scores and rewrites until quality threshold is met |
-| 5. Verification | Fact-checks every claim in the script |
-| 6. SEO | Generates titles, descriptions, tags optimized for YouTube |
-| 7. Storyboard | Breaks the script into visual scenes |
-| 7b. Visual Continuity | Ensures visual consistency across scenes |
-| 8. Audio | Generates narration via text-to-speech |
-| 9. Footage | Finds relevant stock footage |
-| 10. Images | Generates AI images for scenes that need them |
-| 11. Video | Renders the final video using Remotion |
-| 12. QA | Quality checks the output |
-| 13. Upload | Uploads to YouTube (or saves locally) |
+It's not a template filler. Each video gets unique research, a narrative arc, fact-checked scripts, AI narration with pacing control, generated + stock visuals, background music, and SEO-optimized metadata. The pipeline has quality gates at every stage — if something isn't good enough, it rewrites it automatically.
 
-Each stage has quality gates, automatic retries, and self-healing error recovery.
+## How It Works
+
+```
+"The Fall of the Roman Empire"
+         │
+         ▼
+┌─ RESEARCH ──────────────────────────────────────────┐
+│  1. Deep Research      — AI investigates the topic   │
+│  2. Originality Check  — finds an uncovered angle    │
+│  3. Narrative Design   — architects story structure   │
+│  4. Script Writing     — broadcast-quality narration  │
+│  4b. Script Doctor     — scores & rewrites until ✓   │
+│  5. Fact Verification  — checks every claim          │
+└──────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─ PRODUCTION (parallel) ─────────────────────────────┐
+│  6. SEO Optimization   — titles, tags, descriptions  │
+│  7. Scene Breakdown    — visual storyboard           │
+│  7b. Visual Continuity — consistent look across all  │
+│  8. AI Narration       — text-to-speech with pacing  │
+│  9. Stock Footage      — relevant B-roll             │
+│  10. AI Images         — generated scene visuals     │
+│  11. Video Render      — composites everything       │
+│  12. Quality Assurance — automated review            │
+└──────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─ PUBLISH ───────────────────────────────────────────┐
+│  13. Upload            — to YouTube (or save local)  │
+│      + Shorts          — vertical clips auto-cut     │
+│      + Thumbnail       — generated cover image       │
+└──────────────────────────────────────────────────────┘
+         │
+         ▼
+    🎬 Done. Video is live.
+```
+
+Every stage has **quality gates**, **automatic retries**, and **self-healing recovery**. If Stage 4 produces a weak script, the Script Doctor rewrites it. If an image comes back blurry, it regenerates. If the pipeline crashes mid-run, `--resume` picks up exactly where it left off.
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 20+
-- Docker (recommended) or local setup
-- API keys (see below)
-
-### Option 1: Docker (Recommended)
+### Option 1: Docker (recommended)
 
 ```bash
 git clone https://github.com/Drogon4231/obsidian-engine.git
 cd obsidian-engine
-
-cp .env.example .env
-# Edit .env with your keys (see "Getting API Keys" below)
-
+cp .env.example .env     # Add your API keys
 docker compose up --build
 ```
 
-Open `http://localhost:8080` and use the **Setup Wizard** (SETUP tab) to configure everything from the browser.
+Open `http://localhost:8080` → use the **Setup Wizard** to configure everything from your browser.
 
-### Option 2: Local Setup
+### Option 2: Local
 
 ```bash
 git clone https://github.com/Drogon4231/obsidian-engine.git
 cd obsidian-engine
 
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
 cd remotion && npm install && cd ..
-cd dashboard && npm install && npm run build && cd ..
 
-cp .env.example .env
-# Edit .env with your keys
-
-# Run a single video
+cp .env.example .env     # Add your API keys
 python run_pipeline.py "The History of the Internet"
 ```
 
-### Option 3: CLI One-Shot
+### Option 3: Resume / restart from any stage
 
 ```bash
-python run_pipeline.py "The Rise and Fall of the Roman Empire"
-
-# Resume a failed run
-python run_pipeline.py "The Rise and Fall of the Roman Empire" --resume
-
-# Start from a specific stage
-python run_pipeline.py "The Rise and Fall of the Roman Empire" --from-stage 8
+python run_pipeline.py "The Roman Empire" --resume        # Pick up where you left off
+python run_pipeline.py "The Roman Empire" --from-stage 8  # Re-run from narration
 ```
 
-## Getting API Keys
+## API Keys
 
-| Service | Purpose | Free Tier? | Get It |
-|---------|---------|-----------|--------|
-| **Anthropic** | AI text generation (Claude) | $5 free credit | [console.anthropic.com](https://console.anthropic.com) |
-| **ElevenLabs** | Text-to-speech narration | 10k chars/month | [elevenlabs.io](https://elevenlabs.io) |
-| **fal.ai** | AI image generation | $10 free credit | [fal.ai](https://fal.ai) |
-| **Pexels** | Stock footage | Unlimited free | [pexels.com/api](https://www.pexels.com/api/new/) |
+You need **4 API keys** to get started. Total free credits cover your first 3-5 videos:
 
-Optional:
-| Service | Purpose | Get It |
-|---------|---------|--------|
-| Supabase | Database for analytics | [supabase.com](https://supabase.com) |
-| YouTube API | Auto-upload | [Google Cloud Console](https://console.cloud.google.com) |
-| Telegram | Notifications | Message [@BotFather](https://t.me/BotFather) |
+| Service | What For | Free Tier | Link |
+|---------|----------|-----------|------|
+| **Anthropic** | Script writing, research, all AI reasoning | $5 credit | [console.anthropic.com](https://console.anthropic.com) |
+| **ElevenLabs** | Voice narration | 10K chars/mo | [elevenlabs.io](https://elevenlabs.io) |
+| **fal.ai** | AI image generation | $10 credit | [fal.ai](https://fal.ai) |
+| **Pexels** | Stock footage | Unlimited | [pexels.com/api](https://www.pexels.com/api/new/) |
+
+<details>
+<summary><b>Optional services</b> (analytics, auto-upload, notifications)</summary>
+
+| Service | What For | Link |
+|---------|----------|------|
+| YouTube API | Auto-upload to YouTube | [Google Cloud Console](https://console.cloud.google.com) |
+| Supabase | Analytics database | [supabase.com](https://supabase.com) |
+| Epidemic Sound | Premium music + SFX | [epidemicsound.com](https://www.epidemicsound.com) |
+| Telegram | Pipeline notifications | [@BotFather](https://t.me/BotFather) |
+
+</details>
 
 ## Cost Per Video
 
-Typical cost for a 15-minute video:
+| Component | Cost |
+|-----------|------|
+| AI (Claude — scripts, research, scenes) | $0.50 – $1.50 |
+| Voice (ElevenLabs TTS) | $0.30 – $0.80 |
+| Images (fal.ai generation) | $0.20 – $0.50 |
+| Footage (Pexels) | Free |
+| **Total per video** | **~$1 – $3** |
 
-| Service | Cost |
-|---------|------|
-| Claude (Anthropic) | $0.50 - $1.50 |
-| ElevenLabs (TTS) | $0.30 - $0.80 |
-| fal.ai (images) | $0.20 - $0.50 |
-| Pexels (footage) | Free |
-| **Total** | **$1.00 - $2.80** |
+A 15-minute documentary for the price of a coffee.
 
 ## Content Profiles
 
-Profiles control the tone, structure, and visual style of generated videos. Change one line in `obsidian.yaml`:
+Change one line to completely transform the output style:
 
 ```yaml
-profile: explainer  # or documentary, true_crime, video_essay
+# obsidian.yaml
+profile: documentary     # Netflix/HBO style
 ```
 
 | Profile | Style | Think... |
 |---------|-------|----------|
-| `documentary` | Cinematic, authoritative, dark history | Netflix/HBO docs |
-| `explainer` | Clear, curious, educational | Kurzgesagt, Wendover |
-| `true_crime` | Measured, investigative, suspenseful | JCS, That Chapter |
-| `video_essay` | Thoughtful, analytical, personal | Nerdwriter, Philosophy Tube |
+| `documentary` | Cinematic, authoritative, dark | Lemmino, Netflix docs |
+| `explainer` | Clear, curious, visual | Kurzgesagt, Wendover |
+| `true_crime` | Investigative, suspenseful | JCS, That Chapter |
+| `video_essay` | Analytical, personal | Nerdwriter, Philosophy Tube |
 
-**Create your own:** Copy `profiles/_template.yaml`, customize, and set `profile: your_name` in `obsidian.yaml`.
+**Make your own:** copy `profiles/_template.yaml` → customize tone, pacing, visual style → set `profile: your_name`.
 
 ## Pluggable Providers
 
-Swap any external service by changing `obsidian.yaml`:
+Swap any external service without touching code:
 
 ```yaml
+# obsidian.yaml
 providers:
-  llm:
-    name: openai          # Switch from Claude to GPT
-  tts:
-    name: elevenlabs      # Default TTS
-  images:
-    name: fal             # AI image generation
-  footage:
-    name: pexels          # Stock footage
-  upload:
-    name: local           # Save to disk instead of YouTube
+  llm:     { name: openai }        # GPT instead of Claude
+  tts:     { name: elevenlabs }    # Default narrator
+  images:  { name: fal }           # AI image generation
+  footage: { name: pexels }        # Stock B-roll
+  upload:  { name: local }         # Save to disk (or: youtube)
+  music:   { name: auto }          # Epidemic Sound → local fallback
 ```
 
-Built-in providers: `anthropic`, `openai`, `elevenlabs`, `fal`, `pexels`, `local`
+Built-in: `anthropic`, `openai`, `elevenlabs`, `fal`, `pexels`, `local`, `epidemic_sound`
 
-Or use a custom provider class: `name: my_package.module.MyProvider`
+Custom provider? Point to any class: `name: my_package.MyProvider`
+
+## Dashboard
+
+Real-time monitoring at `http://localhost:8080`:
+
+| Tab | What It Shows |
+|-----|--------------|
+| **Home** | Live pipeline status, logs, run history |
+| **Queue** | Topic queue with scheduling |
+| **Intel** | Channel analytics + performance insights |
+| **Health** | Error tracking, agent stats, traces |
+| **Tuning** | Parameter optimization recommendations |
+| **Setup** | Guided wizard for first-time configuration |
+
+Keyboard shortcuts: `1`–`6` switch tabs, `T` triggers a run, `L` toggles logs.
 
 ## Configuration
 
-All pipeline behavior is controlled from `obsidian.yaml`:
+Everything lives in one file — `obsidian.yaml`:
 
 ```yaml
-profile: documentary          # Content style
+profile: documentary
 
 voice:
-  narrator_id: "JBFqnCBsd6RMkjVDRZzb"   # ElevenLabs voice ID
-  speed_body: 0.76                        # Narration speed
+  narrator_id: "JBFqnCBsd6RMkjVDRZzb"  # ElevenLabs voice
+  speed_body: 0.76                       # Narration pace
 
 models:
-  premium: "claude-opus-4-6"     # Creative tasks
-  full: "claude-sonnet-4-6"      # Complex reasoning
-  light: "claude-haiku-4-5-20251001"  # Fast tasks
+  premium: "claude-opus-4-6"    # Creative tasks (script, narrative)
+  full: "claude-sonnet-4-6"     # Analysis (research, SEO)
+  light: "claude-haiku-4-5-20251001"  # Fast tasks (compliance, scoring)
 
 cost:
-  budget_max_usd: 5.00           # Max spend per video (0 = unlimited)
+  budget_max_usd: 5.00          # Hard cap per video (0 = unlimited)
 
 video:
   fps: 30
@@ -181,86 +217,79 @@ video:
   long_height: 1080
 ```
 
-See `obsidian.yaml` for all options with documentation.
-
-## Dashboard
-
-Real-time monitoring UI at `http://localhost:8080` with 6 tabs:
-
-| Tab | What It Shows |
-|-----|--------------|
-| HOME | Pipeline status, live logs, run history |
-| QUEUE | Topic queue browser |
-| INTEL | Analytics and performance insights |
-| HEALTH | Error summary, agent stats, traces |
-| TUNING | Parameter optimization with AI recommendations |
-| SETUP | Guided setup wizard for initial configuration |
-
-Keyboard shortcuts: `1`-`6` switch tabs, `T` triggers a run, `L` toggles logs, `?` shows help.
+See [`obsidian.yaml`](obsidian.yaml) for all options with inline documentation.
 
 ## Architecture
 
 ```
 obsidian-engine/
-├── run_pipeline.py       # Entry point
-├── obsidian.yaml         # All configuration
-├── profiles/             # Content style profiles
-├── providers/            # Pluggable service backends
-│   ├── base.py           #   Abstract base classes
-│   ├── registry.py       #   Provider factory
-│   ├── llm/              #   Anthropic, OpenAI
-│   ├── tts/              #   ElevenLabs
-│   ├── images/           #   fal.ai
-│   ├── footage/          #   Pexels
-│   └── upload/           #   Local save
-├── agents/               # 15 specialized AI agents
-├── core/                 # Config, logging, costs, schemas
-├── pipeline/             # Media processing (audio, images, video)
-├── clients/              # API clients (Claude, Supabase)
-├── server/               # Webhook server + notifications
-├── dashboard/            # Monitoring UI (Preact + Signals + Tailwind)
-├── remotion/             # Video renderer (React + Remotion)
-├── intel/                # Competitive intelligence
-├── tests/                # 1400+ tests
-├── Dockerfile
-└── docker-compose.yml
+├── run_pipeline.py        # Entry point — one command runs everything
+├── obsidian.yaml          # Single config file
+├── profiles/              # Content style definitions
+├── providers/             # Pluggable backends (LLM, TTS, images, etc.)
+├── agents/                # 15 specialized AI agents (one per stage)
+├── core/                  # Schemas, logging, cost tracking, config
+├── pipeline/              # Media processing (audio, images, video)
+├── clients/               # API clients
+├── server/                # Webhook server + notifications
+├── dashboard/             # Monitoring UI (Preact + Tailwind)
+├── remotion/              # Video renderer (React + Remotion)
+├── intel/                 # Channel analytics + competitive intelligence
+└── tests/                 # 1,400+ tests
 ```
 
 ## Features
 
-- **Any content style** - Documentary, explainer, true crime, video essay, or custom profiles
-- **Swappable backends** - Change LLM, TTS, image, footage, or upload provider in one line
-- **Setup wizard** - Browser-based configuration for non-technical users
-- **Self-healing pipeline** - Automatic retries, pipeline doctor for stage-level recovery
-- **Quality gates** - Every stage validates output before proceeding
-- **Cost tracking** - Real-time token counting and budget caps
-- **Resume support** - Crash-safe state persistence, resume from any stage
-- **Thread-safe** - Parallel execution with proper locking
-- **Dashboard** - Real-time monitoring via Server-Sent Events
-- **Notifications** - Telegram + Discord alerts on completion/failure
-- **Series detection** - Automatically identifies multi-part topics
-- **Shorts pipeline** - Generates YouTube Shorts alongside long-form
+- [x] **13-stage autonomous pipeline** — topic to YouTube in one command
+- [x] **4 content profiles** — documentary, explainer, true crime, video essay (+ custom)
+- [x] **Pluggable providers** — swap LLM, TTS, images, footage, upload in config
+- [x] **Quality gates at every stage** — auto-rewrite until standards are met
+- [x] **Script Doctor** — scores scripts on 8 dimensions, rewrites weak areas
+- [x] **Fact verification** — checks claims before publishing
+- [x] **Crash-safe resume** — `--resume` picks up from last checkpoint
+- [x] **YouTube Shorts** — auto-generates vertical clips alongside long-form
+- [x] **Series detection** — identifies multi-part topics automatically
+- [x] **Real-time dashboard** — monitor pipeline via browser (SSE)
+- [x] **Cost tracking** — per-video budget caps with real-time token counting
+- [x] **Notifications** — Telegram + Discord alerts on completion/failure
+- [x] **Docker + Docker Compose** — one-command deployment
+- [x] **Setup Wizard** — browser-based configuration for non-technical users
+- [x] **1,400+ tests** — 26%+ coverage, CI on every push
+- [ ] Knowledge graph for cross-video intelligence ([#20](https://github.com/Drogon4231/obsidian-engine/issues/20))
+- [ ] A/B testing for titles & thumbnails ([#25](https://github.com/Drogon4231/obsidian-engine/issues/25))
+- [ ] TikTok & Instagram Reels export ([#26](https://github.com/Drogon4231/obsidian-engine/issues/26))
+- [ ] More LLM providers: Gemini, Ollama ([#21](https://github.com/Drogon4231/obsidian-engine/issues/21), [#6](https://github.com/Drogon4231/obsidian-engine/issues/6))
+- [ ] More image providers: DALL-E, Stability AI ([#11](https://github.com/Drogon4231/obsidian-engine/issues/11), [#14](https://github.com/Drogon4231/obsidian-engine/issues/14))
 
 ## Running Tests
 
 ```bash
-# Python tests (1400+ tests)
+# Full test suite
 python -m pytest tests/ -v --tb=short --cov=. --cov-fail-under=26
 
-# Linting
+# Lint
 ruff check --select E,F,W --ignore E501,E402 --exclude remotion .
 
-# Dashboard tests
-cd dashboard && npm test
-
-# Remotion tests
-cd remotion && npm test
+# Frontend
+cd remotion && npm test && npm run lint
 ```
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, project invariants, and PR process.
+Contributions welcome — especially new providers and content profiles. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
+
+Looking for a place to start? Check issues labeled [`good first issue`](https://github.com/Drogon4231/obsidian-engine/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+[MIT](LICENSE) — use it however you want.
+
+---
+
+<div align="center">
+
+**Built by [Harshith Kantamneni](https://github.com/Drogon4231)**
+
+If this saves you time, consider giving it a ⭐
+
+</div>
