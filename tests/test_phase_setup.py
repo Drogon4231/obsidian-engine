@@ -1,5 +1,6 @@
 """Tests for pipeline/phase_setup.py — init, agents, credit checks, crash handlers."""
 
+import logging
 import sys
 import json
 import time
@@ -8,6 +9,16 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _capture_obsidian_logs(caplog):
+    """Add caplog handler directly to obsidian logger (propagate=False blocks root)."""
+    obs_logger = logging.getLogger("obsidian")
+    obs_logger.addHandler(caplog.handler)
+    caplog.set_level(logging.DEBUG, logger="obsidian")
+    yield
+    obs_logger.removeHandler(caplog.handler)
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -353,7 +364,7 @@ class TestLoadAgents:
 class TestRunCreditChecksAnthropic:
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": ""})
-    def test_anthropic_check_passes(self, capsys):
+    def test_anthropic_check_passes(self, caplog):
         from pipeline.phase_setup import run_credit_checks
         mock_anth = MagicMock()
         mock_client = MagicMock()
@@ -362,8 +373,7 @@ class TestRunCreditChecksAnthropic:
         with patch.dict("sys.modules", {"anthropic": mock_anth}):
             ctx = PipelineContext(topic="test")
             run_credit_checks(ctx)
-        captured = capsys.readouterr()
-        assert "OK" in captured.out
+        assert "OK" in caplog.text
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": ""})
     def test_anthropic_credits_exhausted_bad_request(self):
@@ -396,7 +406,7 @@ class TestRunCreditChecksAnthropic:
                 run_credit_checks(ctx)
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": ""})
-    def test_anthropic_generic_error_no_credit_mention(self, capsys):
+    def test_anthropic_generic_error_no_credit_mention(self, caplog):
         from pipeline.phase_setup import run_credit_checks
         mock_anth = MagicMock()
         mock_anth.BadRequestError = type("BadRequestError", (Exception,), {})
@@ -406,14 +416,13 @@ class TestRunCreditChecksAnthropic:
         with patch.dict("sys.modules", {"anthropic": mock_anth}):
             ctx = PipelineContext(topic="test")
             run_credit_checks(ctx)  # should NOT raise
-        captured = capsys.readouterr()
-        assert "warning" in captured.out.lower()
+        assert "warning" in caplog.text.lower()
 
 
 class TestRunCreditChecksElevenLabs:
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": "el-key"})
-    def test_elevenlabs_check_passes(self, capsys):
+    def test_elevenlabs_check_passes(self, caplog):
         from pipeline.phase_setup import run_credit_checks
         mock_anth = MagicMock()
         mock_anth.BadRequestError = type("BadRequestError", (Exception,), {})
@@ -430,8 +439,7 @@ class TestRunCreditChecksElevenLabs:
         with patch.dict("sys.modules", {"anthropic": mock_anth, "requests": mock_requests}):
             ctx = PipelineContext(topic="test")
             run_credit_checks(ctx)
-        captured = capsys.readouterr()
-        assert "7,000 chars remaining" in captured.out
+        assert "7,000 chars remaining" in caplog.text
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": "el-key"})
     def test_elevenlabs_401_raises(self):
@@ -451,7 +459,7 @@ class TestRunCreditChecksElevenLabs:
                 run_credit_checks(ctx)
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key", "ELEVENLABS_API_KEY": ""})
-    def test_elevenlabs_skips_when_no_key(self, capsys):
+    def test_elevenlabs_skips_when_no_key(self, caplog):
         from pipeline.phase_setup import run_credit_checks
         mock_anth = MagicMock()
         mock_anth.BadRequestError = type("BadRequestError", (Exception,), {})
@@ -460,24 +468,22 @@ class TestRunCreditChecksElevenLabs:
         with patch.dict("sys.modules", {"anthropic": mock_anth}):
             ctx = PipelineContext(topic="test")
             run_credit_checks(ctx)
-        captured = capsys.readouterr()
-        assert "ElevenLabs" not in captured.out or "OK" in captured.out
+        assert "ElevenLabs" not in caplog.text or "OK" in caplog.text
 
 
 # ── run_topic_dedup() ────────────────────────────────────────────────────────
 
 class TestRunTopicDedup:
 
-    def test_duplicate_detected_prints_warning(self, capsys):
+    def test_duplicate_detected_prints_warning(self, caplog):
         from pipeline.phase_setup import run_topic_dedup
         mock_store = MagicMock()
         mock_store.is_duplicate.return_value = (True, "Similar Topic")
         with patch.dict("sys.modules", {"server": MagicMock(topic_store=mock_store), "server.topic_store": mock_store}):
             ctx = PipelineContext(topic="My Topic", resume=False)
             run_topic_dedup(ctx)
-        captured = capsys.readouterr()
-        assert "duplicate" in captured.out.lower()
-        assert "Similar Topic" in captured.out
+        assert "duplicate" in caplog.text.lower()
+        assert "Similar Topic" in caplog.text
 
     def test_not_resuming_checks_dedup(self):
         from pipeline.phase_setup import run_topic_dedup
@@ -501,14 +507,13 @@ class TestRunTopicDedup:
 
 class TestNotifyStart:
 
-    def test_prints_banner_with_topic(self, capsys):
+    def test_prints_banner_with_topic(self, caplog):
         from pipeline.phase_setup import notify_start
         ctx = PipelineContext(topic="The Great Fire of London")
         with patch.dict("sys.modules", {"server": MagicMock(), "server.notify": MagicMock()}):
             notify_start(ctx)
-        captured = capsys.readouterr()
-        assert "The Great Fire of London" in captured.out
-        assert "OBSIDIAN" in captured.out
+        assert "The Great Fire of London" in caplog.text
+        assert "OBSIDIAN" in caplog.text
 
     def test_calls_notify_pipeline_start(self):
         from pipeline.phase_setup import notify_start

@@ -8,8 +8,22 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
+import logging
+
+import pytest
+
 from pipeline.context import PipelineContext
 from pipeline.runner import StageRunner
+
+
+@pytest.fixture(autouse=True)
+def _capture_obsidian_logs(caplog):
+    """Add caplog handler directly to obsidian logger (propagate=False blocks root)."""
+    obs_logger = logging.getLogger("obsidian")
+    obs_logger.addHandler(caplog.handler)
+    caplog.set_level(logging.DEBUG, logger="obsidian")
+    yield
+    obs_logger.removeHandler(caplog.handler)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,7 +46,7 @@ def _make_ctx(tmp_path=None, **overrides) -> PipelineContext:
 def _make_runner(ctx: PipelineContext) -> StageRunner:
     runner = StageRunner(ctx)
     runner.mark = MagicMock()
-    # mark_metadata must actually write to ctx.state for tests that check state contents
+    # mark_metadata must actually set ctx.state so assertions on state work
     def _mock_mark_metadata(key, value):
         ctx.state[key] = value
     runner.mark_metadata = MagicMock(side_effect=_mock_mark_metadata)
@@ -58,20 +72,19 @@ class TestCheckAndWarn:
         from pipeline.phase_prod import _check_and_warn
         _check_and_warn(issues, stage_name)
 
-    def test_prints_warnings_when_issues_exist(self, capsys):
+    def test_prints_warnings_when_issues_exist(self, caplog):
         self._call(["Bad title length", "Missing tags"], "SEO")
-        out = capsys.readouterr().out
-        assert "SEO quality issues" in out
-        assert "Bad title length" in out
-        assert "Missing tags" in out
+        assert "SEO quality issues" in caplog.text
+        assert "Bad title length" in caplog.text
+        assert "Missing tags" in caplog.text
 
-    def test_silent_when_no_issues(self, capsys):
+    def test_silent_when_no_issues(self, caplog):
         self._call([], "SEO")
-        assert capsys.readouterr().out == ""
+        assert "quality issues" not in caplog.text
 
-    def test_silent_when_none(self, capsys):
+    def test_silent_when_none(self, caplog):
         self._call(None, "SEO")
-        assert capsys.readouterr().out == ""
+        assert "quality issues" not in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -101,7 +114,7 @@ class TestRunCompliance:
         from pipeline.phase_prod import _run_compliance
         assert _run_compliance(ctx, runner) is None
 
-    def test_green_risk(self, capsys):
+    def test_green_risk(self, caplog):
         mock_run = MagicMock(return_value={"risk_level": "green", "flags": []})
         ctx = _make_ctx(script={"full_script": "safe text"})
         runner = _make_runner(ctx)
@@ -112,9 +125,9 @@ class TestRunCompliance:
         runner.mark_metadata.assert_called_once_with(
             "compliance", {"risk_level": "green", "flag_count": 0}
         )
-        assert "GREEN" in capsys.readouterr().out
+        assert "GREEN" in caplog.text
 
-    def test_yellow_risk(self, capsys):
+    def test_yellow_risk(self, caplog):
         flags = [{"category": "violence", "suggestion": "tone down"}]
         mock_run = MagicMock(return_value={"risk_level": "yellow", "flags": flags})
         ctx = _make_ctx(script={"full_script": "edgy text"})
@@ -125,7 +138,7 @@ class TestRunCompliance:
         assert result["risk"] == "yellow"
         assert len(result["flags"]) == 1
         runner.mark_metadata.assert_called_once()
-        assert "YELLOW" in capsys.readouterr().out
+        assert "YELLOW" in caplog.text
 
     def test_red_risk_with_safe_script(self):
         safe = "word " * 501
@@ -142,7 +155,7 @@ class TestRunCompliance:
         assert result["safe_script"] == safe
         assert result["risk"] == "red"
 
-    def test_red_risk_without_safe_script(self, capsys):
+    def test_red_risk_without_safe_script(self, caplog):
         flags = [
             {"severity": "high", "category": "drugs", "text_excerpt": "bad stuff"},
             {"severity": "high", "category": "violence", "text_excerpt": "more bad"},
@@ -158,9 +171,9 @@ class TestRunCompliance:
         result = self._call(ctx, runner, mock_run)
 
         assert result["risk"] == "red"
-        assert "Could not auto-fix" in capsys.readouterr().out
+        assert "Could not auto-fix" in caplog.text
 
-    def test_exception_returns_none(self, capsys):
+    def test_exception_returns_none(self, caplog):
         mock_run = MagicMock(side_effect=RuntimeError("API down"))
         ctx = _make_ctx(script={"full_script": "text"})
         runner = _make_runner(ctx)
@@ -168,7 +181,7 @@ class TestRunCompliance:
         result = self._call(ctx, runner, mock_run)
 
         assert result is None
-        assert "Check skipped" in capsys.readouterr().out
+        assert "Check skipped" in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -242,7 +255,7 @@ class TestBuildManifest:
 
         assert ctx.manifest == saved_manifest
 
-    def test_reconstructs_from_stage9_when_no_manifest(self, tmp_path, capsys):
+    def test_reconstructs_from_stage9_when_no_manifest(self, tmp_path, caplog):
         media_dir = tmp_path / "media"
         media_dir.mkdir()
 
@@ -265,7 +278,7 @@ class TestBuildManifest:
 
         assert ctx.manifest["scenes"] == [{"id": 3}]
         assert ctx.manifest["total_duration_seconds"] == 500
-        assert "Reconstructed manifest" in capsys.readouterr().out
+        assert "Reconstructed manifest" in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -278,7 +291,7 @@ class TestRunQaTiers:
         from pipeline.phase_prod import _run_qa_tiers
         _run_qa_tiers(ctx, runner)
 
-    def test_tier1_passes(self, capsys):
+    def test_tier1_passes(self, caplog):
         t1_result = {"passed": True, "errors": [], "warnings": [], "metrics": {}}
         t2_result = {"passed": True, "warnings": [], "sync_score": 0.95}
         fake_qg = _fake_module(
@@ -292,9 +305,9 @@ class TestRunQaTiers:
             self._call(ctx, runner)
 
         assert ctx.state["qa_tier1"] == t1_result
-        assert "Post-render validation passed" in capsys.readouterr().out
+        assert "Post-render validation passed" in caplog.text
 
-    def test_tier1_fails_prints_errors(self, capsys):
+    def test_tier1_fails_prints_errors(self, caplog):
         t1_result = {
             "passed": False,
             "errors": ["Duration mismatch"],
@@ -313,11 +326,11 @@ class TestRunQaTiers:
             self._call(ctx, runner)
 
         assert ctx.state["qa_tier1"] == t1_result
-        out = capsys.readouterr().out
+        out = caplog.text
         assert "Duration mismatch" in out
         assert "Low bitrate" in out
 
-    def test_tier2_passes_prints_sync(self, capsys):
+    def test_tier2_passes_prints_sync(self, caplog):
         t1_result = {"passed": True, "errors": [], "warnings": [], "metrics": {}}
         t2_result = {"passed": True, "warnings": [], "sync_score": 0.95}
         fake_qg = _fake_module(
@@ -331,7 +344,7 @@ class TestRunQaTiers:
             self._call(ctx, runner)
 
         assert ctx.state["qa_tier2"] == t2_result
-        assert "95%" in capsys.readouterr().out
+        assert "95%" in caplog.text
 
     def test_import_error_silently_skips(self):
         """When quality_gates can't be imported, QA is silently skipped."""
@@ -537,7 +550,7 @@ class TestRecordTopic:
         mock_record.assert_called_once()
         assert mock_record.call_args.kwargs["angle"] == "economic collapse"
 
-    def test_exception_prints_warning(self, capsys):
+    def test_exception_prints_warning(self, caplog):
         mock_record = MagicMock(side_effect=RuntimeError("DB down"))
         fake_ts = _fake_module("server.topic_store", record_topic=mock_record)
         fake_server = _fake_module("server", topic_store=fake_ts)
@@ -550,7 +563,7 @@ class TestRecordTopic:
         with patch.dict("sys.modules", {"server": fake_server, "server.topic_store": fake_ts}):
             self._call(ctx)
 
-        assert "topic_store warning" in capsys.readouterr().out
+        assert "topic_store warning" in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -605,7 +618,7 @@ class TestSaveToSupabase:
 
         mock_save_video.assert_not_called()
 
-    def test_exception_prints_warning(self, capsys):
+    def test_exception_prints_warning(self, caplog):
         mock_save_video = MagicMock(side_effect=RuntimeError("DB error"))
         fake_sb = _fake_module("clients.supabase_client", save_video=mock_save_video)
         fake_clients = _fake_module("clients", supabase_client=fake_sb)
@@ -621,7 +634,7 @@ class TestSaveToSupabase:
         with patch.dict("sys.modules", {"clients": fake_clients, "clients.supabase_client": fake_sb}):
             self._call(ctx)
 
-        assert "could not save video to Supabase" in capsys.readouterr().out
+        assert "could not save video to Supabase" in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -681,7 +694,7 @@ class TestFinalizeCosts:
         from pipeline.phase_post import _finalize_costs
         _finalize_costs(ctx)
 
-    def test_when_cost_tracker_exists(self, capsys):
+    def test_when_cost_tracker_exists(self, caplog):
         mock_tracker = MagicMock()
         mock_tracker.get_cost_estimate.return_value = {"total_cost": 1.50}
 
@@ -701,7 +714,7 @@ class TestFinalizeCosts:
         mock_tracker.end_run.assert_called_once_with("run_001", video_id="abc")
         mock_tracker.get_cost_estimate.assert_called_once_with("run_001")
         assert ctx.state["cost_estimate"] == {"total_cost": 1.50}
-        assert "$1.50" in capsys.readouterr().out
+        assert "$1.50" in caplog.text
 
     def test_when_cost_tracker_is_none(self):
         ctx = _make_ctx()
@@ -740,7 +753,7 @@ class TestLogApiCosts:
         from pipeline.phase_post import _log_api_costs
         _log_api_costs(ctx)
 
-    def test_merges_cost_estimate(self, capsys):
+    def test_merges_cost_estimate(self, caplog):
         mock_get_costs = MagicMock(return_value={"usd_total": 0.50, "calls": 10})
         fake_cc = _fake_module("clients.claude_client", get_session_costs=mock_get_costs)
 
@@ -763,7 +776,7 @@ class TestLogApiCosts:
         assert costs["per_stage"] == {"stage_1": 0.10}
         assert costs["per_service"] == {"claude": 1.50}
 
-    def test_sets_costs_without_estimate(self, capsys):
+    def test_sets_costs_without_estimate(self, caplog):
         mock_get_costs = MagicMock(return_value={"usd_total": 0.50, "calls": 10})
         fake_cc = _fake_module("clients.claude_client", get_session_costs=mock_get_costs)
 
@@ -799,7 +812,7 @@ class TestRunQualityReport:
             "manifest": {"scenes": []},
         }
 
-    def test_prints_warnings_when_present(self, capsys):
+    def test_prints_warnings_when_present(self, caplog):
         mock_run_all = MagicMock(return_value={
             "warnings": ["Audio peak too loud"],
             "total_warnings": 1,
@@ -813,11 +826,11 @@ class TestRunQualityReport:
         with patch.dict("sys.modules", {"core": fake_core, "core.quality_gates": fake_qg}):
             self._call(ctx)
 
-        out = capsys.readouterr().out
+        out = caplog.text
         assert "Audio peak too loud" in out
         assert "1 warning" in out
 
-    def test_all_checks_passed(self, capsys):
+    def test_all_checks_passed(self, caplog):
         mock_run_all = MagicMock(return_value={
             "warnings": [],
             "total_warnings": 0,
@@ -831,7 +844,7 @@ class TestRunQualityReport:
         with patch.dict("sys.modules", {"core": fake_core, "core.quality_gates": fake_qg}):
             self._call(ctx)
 
-        assert "All checks passed" in capsys.readouterr().out
+        assert "All checks passed" in caplog.text
 
     def test_calls_with_correct_pipeline_outputs(self):
         mock_run_all = MagicMock(return_value={

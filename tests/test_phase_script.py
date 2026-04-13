@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,16 @@ import pytest
 
 from pipeline.context import PipelineContext
 from pipeline.runner import StageRunner
+
+
+@pytest.fixture(autouse=True)
+def _capture_obsidian_logs(caplog):
+    """Add caplog handler directly to obsidian logger (propagate=False blocks root)."""
+    obs_logger = logging.getLogger("obsidian")
+    obs_logger.addHandler(caplog.handler)
+    caplog.set_level(logging.DEBUG, logger="obsidian")
+    yield
+    obs_logger.removeHandler(caplog.handler)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -43,7 +54,7 @@ class TestCheckBlueprintAlignment:
         from pipeline.phase_script import _check_blueprint_alignment
         _check_blueprint_alignment(blueprint)
 
-    def test_warns_reveal_before_40pct(self, capsys):
+    def test_warns_reveal_before_40pct(self, caplog):
         blueprint = {
             "act1": {"key_beats": ["a"]},          # 1 beat
             "act2": {"evidence_sequence": ["b"]},   # 1 beat  -> reveal at 2/7 = 28%
@@ -51,9 +62,9 @@ class TestCheckBlueprintAlignment:
             "estimated_length_minutes": 10,
         }
         self._call(blueprint)
-        assert "Reveal at" in capsys.readouterr().out
+        assert "Reveal at" in caplog.text
 
-    def test_warns_reveal_after_60pct(self, capsys):
+    def test_warns_reveal_after_60pct(self, caplog):
         blueprint = {
             "act1": {"key_beats": ["a", "b", "c", "d"]},  # 4
             "act2": {"evidence_sequence": ["e", "f", "g"]},  # 3 -> reveal at 7/8 = 87%
@@ -61,9 +72,9 @@ class TestCheckBlueprintAlignment:
             "estimated_length_minutes": 10,
         }
         self._call(blueprint)
-        assert "Reveal at" in capsys.readouterr().out
+        assert "Reveal at" in caplog.text
 
-    def test_no_warning_at_50pct(self, capsys):
+    def test_no_warning_at_50pct(self, caplog):
         blueprint = {
             "act1": {"key_beats": ["a", "b"]},        # 2
             "act2": {"evidence_sequence": ["c", "d"]},  # 2 -> 4/8 = 50%
@@ -71,14 +82,14 @@ class TestCheckBlueprintAlignment:
             "estimated_length_minutes": 10,
         }
         self._call(blueprint)
-        assert "WARNING" not in capsys.readouterr().out
+        assert "WARNING" not in caplog.text
 
-    def test_warns_short_reflection_beat(self, capsys):
+    def test_warns_short_reflection_beat(self, caplog):
         blueprint = {
             "reflection_beat": {"duration_seconds": 5},
         }
         self._call(blueprint)
-        assert "Reflection beat < 8 seconds" in capsys.readouterr().out
+        assert "Reflection beat < 8 seconds" in caplog.text
 
     def test_empty_blueprint_no_crash(self):
         self._call({})
@@ -400,7 +411,7 @@ class TestRunScriptDoctor:
 
     @patch("pipeline.phase_script.save_state")
     @patch("pipeline.phase_script.clean_script", side_effect=lambda x: x)
-    def test_non_runtime_error_is_non_fatal(self, mock_cl, mock_save, capsys):
+    def test_non_runtime_error_is_non_fatal(self, mock_cl, mock_save, caplog):
         ctx = _make_ctx()
         ctx.script = {"full_script": "script"}
         ctx.blueprint = {}
@@ -412,7 +423,7 @@ class TestRunScriptDoctor:
         from pipeline.phase_script import _run_script_doctor
         _run_script_doctor(ctx, runner, a04, a04b)
 
-        assert "non-fatal" in capsys.readouterr().out
+        assert "non-fatal" in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -421,7 +432,7 @@ class TestRunScriptDoctor:
 
 class TestCheckHookConsistency:
 
-    def test_warns_when_opening_doesnt_match(self, capsys):
+    def test_warns_when_opening_doesnt_match(self, caplog):
         ctx = _make_ctx()
         ctx.blueprint = {"hook": {"opening_scene": "A massive explosion rocked downtown"}}
         ctx.script = {"full_script": "The weather was nice today and birds were singing."}
@@ -429,9 +440,9 @@ class TestCheckHookConsistency:
         from pipeline.phase_script import _check_hook_consistency
         _check_hook_consistency(ctx)
 
-        assert "Hook consistency" in capsys.readouterr().out
+        assert "Hook consistency" in caplog.text
 
-    def test_no_warning_when_words_match(self, capsys):
+    def test_no_warning_when_words_match(self, caplog):
         ctx = _make_ctx()
         ctx.blueprint = {"hook": {"opening_scene": "A massive explosion rocked downtown"}}
         ctx.script = {"full_script": "A massive explosion rocked downtown Chicago on that fateful night."}
@@ -439,9 +450,9 @@ class TestCheckHookConsistency:
         from pipeline.phase_script import _check_hook_consistency
         _check_hook_consistency(ctx)
 
-        assert "Hook consistency" not in capsys.readouterr().out
+        assert "Hook consistency" not in caplog.text
 
-    def test_handles_missing_hook_key(self, capsys):
+    def test_handles_missing_hook_key(self, caplog):
         ctx = _make_ctx()
         ctx.blueprint = {}
         ctx.script = {"full_script": "Some text"}
@@ -450,7 +461,7 @@ class TestCheckHookConsistency:
         # Should not raise
         _check_hook_consistency(ctx)
 
-    def test_handles_hook_not_dict(self, capsys):
+    def test_handles_hook_not_dict(self, caplog):
         ctx = _make_ctx()
         ctx.blueprint = {"hook": "just a string"}
         ctx.script = {"full_script": "Some text"}
@@ -458,7 +469,7 @@ class TestCheckHookConsistency:
         from pipeline.phase_script import _check_hook_consistency
         _check_hook_consistency(ctx)
         # No crash, no warning about consistency (empty hook_scene)
-        assert "Hook consistency" not in capsys.readouterr().out
+        assert "Hook consistency" not in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -481,7 +492,7 @@ class TestApplyVerificationCorrections:
 
         assert ctx.script["full_script"] == "The dog sat on the mat."
 
-    def test_counts_applied_corrections(self, capsys):
+    def test_counts_applied_corrections(self, caplog):
         ctx = _make_ctx()
         ctx.script = {"full_script": "Alpha Beta Gamma Delta"}
         ctx.verification = {
@@ -495,10 +506,10 @@ class TestApplyVerificationCorrections:
         from pipeline.phase_script import _apply_verification_corrections
         _apply_verification_corrections(ctx)
 
-        output = capsys.readouterr().out
+        output = caplog.text
         assert "Applied 2/3" in output
 
-    def test_handles_original_not_found(self, capsys):
+    def test_handles_original_not_found(self, caplog):
         ctx = _make_ctx()
         ctx.script = {"full_script": "Hello world"}
         ctx.verification = {
@@ -510,10 +521,10 @@ class TestApplyVerificationCorrections:
         from pipeline.phase_script import _apply_verification_corrections
         _apply_verification_corrections(ctx)
 
-        assert "Applied 0/1" in capsys.readouterr().out
+        assert "Applied 0/1" in caplog.text
         assert ctx.script["full_script"] == "Hello world"
 
-    def test_no_corrections_no_output(self, capsys):
+    def test_no_corrections_no_output(self, caplog):
         ctx = _make_ctx()
         ctx.script = {"full_script": "Hello"}
         ctx.verification = {"script_corrections": []}
@@ -521,7 +532,7 @@ class TestApplyVerificationCorrections:
         from pipeline.phase_script import _apply_verification_corrections
         _apply_verification_corrections(ctx)
 
-        assert capsys.readouterr().out == ""
+        assert "Applied" not in caplog.text
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -587,7 +598,7 @@ class TestHandleRequiresRewrite:
             _handle_requires_rewrite(ctx, runner, a04, a05)
 
     @patch("pipeline.phase_script.clean_script", side_effect=lambda x: x)
-    def test_retry_error_continues(self, mock_cl, capsys):
+    def test_retry_error_continues(self, mock_cl, caplog):
         ctx = _make_ctx()
         ctx.research = {}
         ctx.angle = {}
@@ -605,7 +616,7 @@ class TestHandleRequiresRewrite:
         from pipeline.phase_script import _handle_requires_rewrite
         _handle_requires_rewrite(ctx, runner, a04, a05)
 
-        output = capsys.readouterr().out
+        output = caplog.text
         assert "error" in output.lower()
         assert runner.mark.call_count == 2
 
