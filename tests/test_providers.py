@@ -154,6 +154,52 @@ class TestFalProvider:
             assert isinstance(p, ImageProvider)
 
 
+class TestOpenAITTSProvider:
+    """Test OpenAI TTS provider instantiation and mocked generation."""
+
+    def test_instantiation_with_key(self):
+        from providers.tts.openai_tts import OpenAIProvider
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "fake-test-key"}):
+            p = OpenAIProvider()
+            assert p.name == "OpenAI"
+            assert isinstance(p, TTSProvider)
+
+            # Check list_voices and check_credits format
+            assert len(p.list_voices()) > 5
+            assert p.check_credits()["remaining"] == -1
+
+    def test_requires_api_key_for_synthesis(self):
+        from providers.tts.openai_tts import OpenAIProvider
+        with patch.dict("os.environ", {}, clear=True):
+            p = OpenAIProvider()
+            with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+                p.synthesize("This should fail")
+
+    @patch("requests.post")
+    def test_synthesize_mocked(self, mock_post):
+        from providers.tts.openai_tts import OpenAIProvider
+
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "fake-test-key"}):
+            p = OpenAIProvider()
+
+            mock_response = mock_post.return_value
+            mock_response.content = b"fake mp3 audio data"
+            mock_response.raise_for_status.return_value = None
+
+            audio_path, timestamps = p.synthesize("Hello world")
+
+            mock_post.assert_called_once()
+            args, kwargs = mock_post.call_args
+            assert kwargs["json"]["input"] == "Hello world"
+            assert kwargs["headers"]["Authorization"] == "Bearer fake-test-key"
+
+            assert audio_path.exists()
+            assert audio_path.read_bytes() == b"fake mp3 audio data"
+            assert timestamps == []
+
+            audio_path.unlink()
+
+
 class TestEpidemicMusicProvider:
     """Test Epidemic Sound music provider instantiation."""
 
