@@ -245,12 +245,20 @@ def _sharpen_for_video(image_path) -> bool:
 
     Standard practice: H.264 + vignette + film grain soften detail.
     A subtle unsharp mask compensates without visible artifacts.
+    Radius and percent are tunable via the optimizer.
     """
     try:
         from PIL import Image as _PILImage
         from PIL import ImageFilter
+        try:
+            from core.param_overrides import get_override
+            _radius = get_override("image.sharpen_radius", 2.0)
+            _percent = int(get_override("image.sharpen_percent", 120.0))
+        except Exception:
+            _radius = 2.0
+            _percent = 120
         img = _PILImage.open(image_path)
-        img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=120, threshold=3))
+        img = img.filter(ImageFilter.UnsharpMask(radius=_radius, percent=_percent, threshold=3))
         img.save(image_path, quality=95)
         img.close()
         return True

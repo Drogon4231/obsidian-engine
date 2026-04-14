@@ -60,6 +60,10 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
     # Color harmonization
     "color.blend_factor":               (0.02, 0.12),  # how strongly palette tints images (0=none)
     "color.contrast_boost":             (1.00, 1.08),  # contrast compensation after blend
+    # Image sharpness (post-render verification + output sharpening)
+    "image.sharpness_threshold":        (20.0, 150.0), # Laplacian variance floor for blurry detection
+    "image.sharpen_radius":             (1.0, 4.0),    # UnsharpMask radius (pixels)
+    "image.sharpen_percent":            (50.0, 200.0),  # UnsharpMask strength (%)
 }
 
 PARAM_DEFAULTS: dict[str, float] = {
@@ -100,6 +104,9 @@ PARAM_DEFAULTS: dict[str, float] = {
     "music.crossfade_start_pct": 0.60,
     "color.blend_factor": 0.05,
     "color.contrast_boost": 1.03,
+    "image.sharpness_threshold": 50.0,
+    "image.sharpen_radius": 2.0,
+    "image.sharpen_percent": 120.0,
 }
 
 # Minimum perceptual step sizes (below these, changes are inaudible)
@@ -141,6 +148,9 @@ PARAM_MIN_STEP: dict[str, float] = {
     "volume.ending": 0.05,
     "color.blend_factor": 0.01,
     "color.contrast_boost": 0.01,
+    "image.sharpness_threshold": 5.0,
+    "image.sharpen_radius": 0.5,
+    "image.sharpen_percent": 10.0,
 }
 
 # Brand consistency: shorts params that should stay within threshold of LF defaults
