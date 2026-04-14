@@ -64,6 +64,12 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
     "image.sharpness_threshold":        (20.0, 150.0), # Laplacian variance floor for blurry detection
     "image.sharpen_radius":             (1.0, 4.0),    # UnsharpMask radius (pixels)
     "image.sharpen_percent":            (50.0, 200.0),  # UnsharpMask strength (%)
+    # Creative / targeting params (closed-loop from quality remediation)
+    "target.duration_margin_pct":       (0.0, 0.30),
+    "target.scene_duration_floor":      (12.0, 40.0),
+    "target.image_quality_floor":       (4.0, 10.0),
+    "target.hook_length_pct":           (0.03, 0.12),
+    "target.scene_count_max":           (8.0, 24.0),
 }
 
 PARAM_DEFAULTS: dict[str, float] = {
@@ -107,6 +113,11 @@ PARAM_DEFAULTS: dict[str, float] = {
     "image.sharpness_threshold": 50.0,
     "image.sharpen_radius": 2.0,
     "image.sharpen_percent": 120.0,
+    "target.duration_margin_pct": 0.05,
+    "target.scene_duration_floor": 20.0,
+    "target.image_quality_floor": 7.0,
+    "target.hook_length_pct": 0.07,
+    "target.scene_count_max": 16.0,
 }
 
 # Minimum perceptual step sizes (below these, changes are inaudible)
@@ -151,6 +162,11 @@ PARAM_MIN_STEP: dict[str, float] = {
     "image.sharpness_threshold": 5.0,
     "image.sharpen_radius": 0.5,
     "image.sharpen_percent": 10.0,
+    "target.duration_margin_pct": 0.02,
+    "target.scene_duration_floor": 2.0,
+    "target.image_quality_floor": 0.5,
+    "target.hook_length_pct": 0.01,
+    "target.scene_count_max": 1.0,
 }
 
 # Brand consistency: shorts params that should stay within threshold of LF defaults

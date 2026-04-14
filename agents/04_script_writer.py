@@ -47,6 +47,15 @@ def run(research, angle, blueprint, quality_feedback: str = ""):
         estimated_mins = max_mins
     target_words = min(int(estimated_mins * 130), max_words)
 
+    # Apply optimizer-tunable duration margin
+    try:
+        from core.param_overrides import get_override
+        duration_margin = get_override("target.duration_margin_pct", 0.05)
+        target_words = int(target_words * (1 + duration_margin))
+        target_words = min(target_words, max_words)  # still respect tier cap
+    except Exception:
+        pass
+
     print(f"[Script Writer] Writing script for: {topic}")
     print(f"[Script Writer] Target: ~{target_words} words ({estimated_mins} minutes)")
 

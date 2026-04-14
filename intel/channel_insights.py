@@ -336,6 +336,17 @@ def get_topic_discovery_intelligence() -> str:
     except Exception:
         pass
 
+    # Audience-requested topics from comments
+    comments = insights.get("comment_intelligence", {})
+    requests = comments.get("trending_requests", [])
+    if requests:
+        lines.append("\nAUDIENCE-REQUESTED TOPICS (from comments):")
+        for req in requests[:10]:
+            topic_name = req.get("topic", "") if isinstance(req, dict) else str(req)
+            freq = req.get("total_frequency", 0) if isinstance(req, dict) else 0
+            likes = req.get("total_likes", 0) if isinstance(req, dict) else 0
+            lines.append(f"  - {topic_name} (mentioned {freq}x, {likes} likes)")
+
     # Comment sentiment intelligence
     sentiment_intel = get_comment_sentiment_intelligence()
     if sentiment_intel:
@@ -622,14 +633,6 @@ def get_script_intelligence() -> str:
     if exp_rec:
         lines.append(f"\nEXPERIMENT TO TRY: {exp_rec[0]}")
 
-    # Hook type ranking by retention
-    try:
-        hook_ranking = _get_hook_type_retention(insights)
-        if hook_ranking:
-            lines.append(f"\nHOOK TYPE RANKING: {hook_ranking}")
-    except Exception:
-        pass
-
     # Pacing analysis summary
     try:
         pacing = _get_pacing_correlation(insights)
@@ -645,6 +648,21 @@ def get_script_intelligence() -> str:
         like_ratio = engagement.get("avg_like_ratio")
         if like_ratio:
             lines.append(f"AVG LIKE RATIO: {like_ratio:.2f}%")
+
+    # Hook type performance (from content classification)
+    hook_ranking = _get_hook_type_retention(insights)
+    if hook_ranking:
+        lines.append(f"\nHOOK TYPE RANKING (by avg retention): {hook_ranking}")
+
+    # Audience feedback from comments
+    comments = insights.get("comment_intelligence", {})
+    if comments:
+        praise = comments.get("praise_themes", [])[:5]
+        criticism = comments.get("criticism_themes", [])[:5]
+        if praise:
+            lines.append("\nAUDIENCE PRAISE: " + "; ".join(str(p) for p in praise))
+        if criticism:
+            lines.append("AUDIENCE CRITICISM: " + "; ".join(str(c) for c in criticism))
 
     return _truncate("\n".join(lines), max_words=400)
 
@@ -1157,6 +1175,18 @@ def get_scene_retention_intelligence() -> str:
             best = sorted_fns[0]
             if best[1].get("sample", 0) >= 3:
                 lines.append(f"  Best-retaining function: {best[0]} ({best[1]['avg_drop']:.1f}% avg drop)")
+
+        # Pacing profile correlation
+        pacing_str = _get_pacing_correlation(insights)
+        if pacing_str:
+            lines.append(f"\nPACING PATTERNS: {pacing_str}")
+
+        # Comment pacing feedback
+        comments = insights.get("comment_intelligence", {})
+        criticism = comments.get("criticism_themes", [])
+        pacing_feedback = [str(c) for c in criticism if any(kw in str(c).lower() for kw in ("pacing", "fast", "slow", "rushed"))]
+        if pacing_feedback:
+            lines.append(f"\nAUDIENCE PACING FEEDBACK: {'; '.join(pacing_feedback[:3])}")
 
         return "\n".join(lines) if len(lines) > 1 else ""
     except Exception:

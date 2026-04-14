@@ -95,9 +95,20 @@ def run(script_data, verification_data=None):
     topic = script_data.get("topic", "")
     word_count = len(full_script.split())
 
-    # Scale scene count to script length
-    target_scenes = max(15, min(35, word_count // 60))
-    print(f"[Scene Breakdown] Breaking script into {target_scenes} scenes ({word_count} words)")
+    # Scale scene count to script length — capped at 16 for documentary pacing
+    # Documentary benchmark: 25-35s/scene (Lemmino averages 30-45s)
+    import math
+    try:
+        from core.param_overrides import get_override
+        _scene_max = int(get_override("target.scene_count_max", 16.0))
+        _scene_floor = get_override("target.scene_duration_floor", 20.0)
+    except Exception:
+        _scene_max = 16
+        _scene_floor = 20.0
+    min_scenes = max(10, word_count // 120)
+    max_scenes = min(_scene_max, math.ceil(word_count / 90))
+    target_scenes = (min_scenes + max_scenes) // 2
+    print(f"[Scene Breakdown] Breaking script into ~{target_scenes} scenes (range {min_scenes}-{max_scenes}, {word_count} words, floor {_scene_floor}s)")
 
     # Load retention danger zones for pacing intelligence
     danger_zones = get_retention_danger_zones()

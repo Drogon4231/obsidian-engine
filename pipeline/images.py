@@ -285,14 +285,20 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
     is_reveal = scene.get("is_reveal_moment", False)
     is_breathing = scene.get("is_breathing_room", False)
 
+    try:
+        from core.param_overrides import get_override
+        _base_floor = int(get_override("target.image_quality_floor", 7.0))
+    except Exception:
+        _base_floor = 7
+
     if position == "hook" or is_reveal:
-        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = 8, 5
+        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = max(_base_floor, 8), 5
     elif position in ("act3", "ending"):
-        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = 8, 4
+        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = max(_base_floor, 8), 4
     elif is_breathing:
-        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = 6, 2
+        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = max(_base_floor - 1, 4), 2
     else:
-        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = 7, 3
+        IMAGE_QUALITY_THRESHOLD, IMAGE_MAX_RETRIES = _base_floor, 3
 
     try:
         narration = scene.get("narration", "")

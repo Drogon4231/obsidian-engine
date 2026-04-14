@@ -79,9 +79,9 @@ class TestParamBoundsConsistency:
 
     def test_param_count(self):
         """Verify expected number of registered params."""
-        assert len(PARAM_BOUNDS) == 40
-        assert len(PARAM_DEFAULTS) == 40
-        assert len(PARAM_MIN_STEP) == 40
+        assert len(PARAM_BOUNDS) == 45
+        assert len(PARAM_DEFAULTS) == 45
+        assert len(PARAM_MIN_STEP) == 45
 
     def test_all_bounds_have_min_step(self):
         """Every key in PARAM_BOUNDS (except TS-side volume.*) must exist in PARAM_MIN_STEP.
