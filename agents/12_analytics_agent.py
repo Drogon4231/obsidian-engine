@@ -2114,6 +2114,7 @@ def run() -> dict:
             "subscribers_gained": row.get("subscribers_gained", 0),
             "engagement_rate": row.get("engagement_rate", 0),
             "content_classification": classification,
+            "quality_report_warnings": (_ps.get("quality_report_warnings") or []) if isinstance(_ps, dict) else [],
         }
         per_video_stats.append(entry)
 

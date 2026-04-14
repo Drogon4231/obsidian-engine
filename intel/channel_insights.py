@@ -664,6 +664,10 @@ def get_script_intelligence() -> str:
         if criticism:
             lines.append("AUDIENCE CRITICISM: " + "; ".join(str(c) for c in criticism))
 
+    recurring = _get_recurring_quality_warnings(insights)
+    if recurring:
+        lines.append(recurring)
+
     return _truncate("\n".join(lines), max_words=400)
 
 
@@ -1188,6 +1192,10 @@ def get_scene_retention_intelligence() -> str:
         if pacing_feedback:
             lines.append(f"\nAUDIENCE PACING FEEDBACK: {'; '.join(pacing_feedback[:3])}")
 
+        recurring = _get_recurring_quality_warnings(insights)
+        if recurring:
+            lines.append(recurring)
+
         return "\n".join(lines) if len(lines) > 1 else ""
     except Exception:
         return ""
@@ -1270,6 +1278,38 @@ def _get_pacing_correlation(insights: dict) -> str:
         best = ranked[0]
         avg = sum(best[1]) / len(best[1])
         return f"Best pacing: {best[0]} ({avg:.0f}% avg retention, {len(best[1])} videos)"
+    except Exception:
+        return ""
+
+
+def _get_recurring_quality_warnings(insights: dict) -> str:
+    """Detect quality warnings that recur across recent videos."""
+    try:
+        per_video = insights.get("per_video_stats", [])
+        recent = per_video[-5:] if len(per_video) > 5 else per_video
+        if not recent:
+            return ""
+        import re
+        from collections import Counter
+        patterns = Counter()
+        for video in recent:
+            warnings = video.get("quality_report_warnings", [])
+            if not isinstance(warnings, list):
+                continue
+            for w in warnings:
+                if not isinstance(w, str):
+                    continue
+                normalized = re.sub(r'\d+', 'N', w.lower()).strip()
+                normalized = re.sub(r'\s+', ' ', normalized)
+                patterns[normalized] += 1
+        recurring = [(pat, count) for pat, count in patterns.items() if count >= 2]
+        if not recurring:
+            return ""
+        recurring.sort(key=lambda x: -x[1])
+        lines = ["\nRECURRING QUALITY ISSUES (from last 5 videos):"]
+        for pat, count in recurring[:5]:
+            lines.append(f"  - {pat} ({count}/{len(recent)} videos)")
+        return "\n".join(lines)
     except Exception:
         return ""
 

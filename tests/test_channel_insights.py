@@ -461,3 +461,49 @@ class TestTopicDiscoveryShortsSignals:
             result = channel_insights.get_topic_discovery_intelligence()
             assert "SHORTS ERA PERFORMANCE" not in result
             assert "SHORTS BOOST" not in result
+
+
+class TestRecurringQualityWarnings:
+
+    def test_empty_when_no_data(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        assert _get_recurring_quality_warnings({}) == ""
+
+    def test_empty_when_no_warnings(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        insights = {"per_video_stats": [{"title": "V1"}, {"title": "V2"}]}
+        assert _get_recurring_quality_warnings(insights) == ""
+
+    def test_detects_recurring_warning(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        insights = {"per_video_stats": [
+            {"title": "V1", "quality_report_warnings": ["SEO title too long: 85 characters"]},
+            {"title": "V2", "quality_report_warnings": ["SEO title too long: 92 characters"]},
+            {"title": "V3", "quality_report_warnings": ["No rhetorical questions"]},
+        ]}
+        result = _get_recurring_quality_warnings(insights)
+        assert "seo title too long" in result.lower()
+
+    def test_ignores_one_off_warnings(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        insights = {"per_video_stats": [
+            {"title": "V1", "quality_report_warnings": ["Unique issue A"]},
+            {"title": "V2", "quality_report_warnings": ["Unique issue B"]},
+        ]}
+        assert _get_recurring_quality_warnings(insights) == ""
+
+    def test_only_checks_last_5(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        stats = [{"title": f"V{i}", "quality_report_warnings": []} for i in range(10)]
+        stats[0]["quality_report_warnings"] = ["Old issue"]
+        stats[1]["quality_report_warnings"] = ["Old issue"]
+        assert _get_recurring_quality_warnings({"per_video_stats": stats}) == ""
+
+    def test_no_crash_on_malformed(self):
+        from intel.channel_insights import _get_recurring_quality_warnings
+        insights = {"per_video_stats": [
+            {"quality_report_warnings": "not a list"},
+            {"quality_report_warnings": None},
+            {},
+        ]}
+        assert isinstance(_get_recurring_quality_warnings(insights), str)
