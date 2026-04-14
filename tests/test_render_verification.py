@@ -358,7 +358,7 @@ class TestSharpness:
         mock_res.return_value = (1920, 1080)
         mock_cmd.return_value = ("", "")  # no black frames
         mock_extract.return_value = True
-        mock_sharp.return_value = 50.0  # below 100 threshold
+        mock_sharp.return_value = 30.0  # below 50 threshold (calibrated for AI art + H.264)
 
         scenes = [{"start_time": 0, "end_time": 5}]
         result = verify_visual_output(str(video), scenes=scenes, expected_resolution=(1920, 1080))

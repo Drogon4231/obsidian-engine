@@ -472,7 +472,9 @@ def verify_visual_output(
             if _extract_frame(video_path, mid, mid_frame):
                 sharpness = _compute_sharpness(mid_frame)
                 status = "ok"
-                if sharpness is not None and sharpness < 100:
+                # Threshold 50: calibrated for AI art + vignette + film grain + H.264.
+                # Photographs score 200-5000+; AI documentary frames score 40-200.
+                if sharpness is not None and sharpness < 50:
                     status = "blurry"
                     result.deviations.append(f"Scene {i}: low sharpness ({sharpness:.0f})")
                 result.sharpness_report.append({

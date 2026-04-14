@@ -760,3 +760,27 @@ class TestEnsureMinResolution:
         from pipeline.images import _ensure_min_resolution
         result = _ensure_min_resolution(bad, 1920, 1080)
         assert result is False
+
+
+class TestSharpenForVideo:
+    """Test output sharpening for H.264 delivery."""
+
+    def test_sharpens_image(self, tmp_path):
+        from PIL import Image
+        img = tmp_path / "scene.jpg"
+        Image.new("RGB", (1920, 1080), color=(128, 128, 128)).save(img)
+        from pipeline.images import _sharpen_for_video
+        assert _sharpen_for_video(img) is True
+        # File should still exist and be valid
+        result = Image.open(img)
+        assert result.size == (1920, 1080)
+
+    def test_nonexistent_file_returns_false(self, tmp_path):
+        from pipeline.images import _sharpen_for_video
+        assert _sharpen_for_video(tmp_path / "nope.jpg") is False
+
+    def test_corrupt_file_returns_false(self, tmp_path):
+        bad = tmp_path / "bad.jpg"
+        bad.write_text("garbage")
+        from pipeline.images import _sharpen_for_video
+        assert _sharpen_for_video(bad) is False

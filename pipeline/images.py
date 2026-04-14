@@ -240,6 +240,24 @@ def _ensure_min_resolution(image_path, min_width: int = 1920, min_height: int = 
         return False
 
 
+def _sharpen_for_video(image_path) -> bool:
+    """Apply output sharpening for H.264 video delivery.
+
+    Standard practice: H.264 + vignette + film grain soften detail.
+    A subtle unsharp mask compensates without visible artifacts.
+    """
+    try:
+        from PIL import Image as _PILImage
+        from PIL import ImageFilter
+        img = _PILImage.open(image_path)
+        img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=120, threshold=3))
+        img.save(image_path, quality=95)
+        img.close()
+        return True
+    except Exception:
+        return False
+
+
 def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                            mood_light, style_recraft, style_flux,
                            character_portraits=None, visual_bible=None,
@@ -462,6 +480,9 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
         if _ensure_min_resolution(img_path):
             logger.info(f"  [{_thread}] Upscaled to minimum resolution (Lanczos)")
 
+        # Output sharpening for H.264 delivery (compensates for vignette + grain + compression)
+        _sharpen_for_video(img_path)
+
         scene["ai_image"] = str(img_path)
         return (idx, scene, True)
 
@@ -490,6 +511,7 @@ def _generate_single_image(idx, scene, total_scenes, assets_dir, image_model,
                 else:
                     if _ensure_min_resolution(fallback_path):
                         logger.info(f"  [{_thread}] Upscaled Wikimedia fallback to minimum resolution")
+                    _sharpen_for_video(fallback_path)
                     scene["ai_image"] = str(fallback_path)
                     logger.info(f"  [{_thread}] Using Wikimedia fallback: {fallback_path.name}")
                     return (idx, scene, True)
